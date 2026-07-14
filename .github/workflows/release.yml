@@ -9,7 +9,7 @@ permissions: {}
 
 jobs:
   publish:
-    name: Verify and publish exact package
+    name: Verify and stage exact package
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: npm
@@ -68,8 +68,17 @@ jobs:
       - name: Audit high-severity vulnerabilities
         run: npm run audit
 
-      - name: Install OIDC-capable npm
+      - name: Preserve verified package candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-package-${{ github.run_id }}
+          path: .artifacts/
+          if-no-files-found: error
+          retention-days: 90
+          include-hidden-files: true
+
+      - name: Install OIDC and staged-publishing capable npm
         run: npm install --global npm@11.18.0 --ignore-scripts
 
-      - name: Publish the verified tarball with provenance
-        run: npm run release:publish
+      - name: Stage the verified tarball with provenance
+        run: npm run release:stage
