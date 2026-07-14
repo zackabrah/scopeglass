@@ -37,8 +37,30 @@ jobs:
       - name: Validate release tag
         run: npm run release:check
 
+      - name: Install isolated browser engines
+        run: node node_modules/playwright-core/cli.js install --with-deps chromium firefox webkit
+
+      - name: Run browser security and accessibility checks
+        run: npm run browser:check
+
+      - name: Preserve browser evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-browser-qa-${{ github.run_id }}
+          path: .browser-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+          include-hidden-files: true
+
       - name: Build and verify package once
         run: npm run verify
+
+      - name: Verify checkout stayed clean
+        run: |
+          git diff --exit-code
+          git diff --cached --exit-code
+          test -z "$(git status --porcelain --untracked-files=normal)"
 
       - name: Verify registry signatures
         run: npm run audit:signatures
