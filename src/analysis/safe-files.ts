@@ -1,8 +1,9 @@
-import { constants, type Stats } from "node:fs";
+import { type BigIntStats, constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { TextDecoder } from "node:util";
 
 import { ScopeglassError } from "../error.js";
+import { sameFile } from "../file-identity.js";
 
 const GIT_MARKER_MAX_BYTES = 4 * 1024;
 const READ_CHUNK_BYTES = 64 * 1024;
@@ -30,10 +31,6 @@ function errorCode(error: unknown): string | undefined {
 function isMissing(error: unknown): boolean {
   const code = errorCode(error);
   return code === "ENOENT" || code === "ENOTDIR";
-}
-
-function sameFile(left: Stats, right: Stats): boolean {
-  return left.dev === right.dev && left.ino === right.ino;
 }
 
 function boundaryError(
@@ -132,7 +129,7 @@ async function readAtMost(
 async function readCheckedFile(
   absolutePath: string,
   displayPath: string,
-  initialStats: Stats,
+  initialStats: BigIntStats,
   limit: number,
   purpose: ReadPurpose,
 ): Promise<Buffer> {
@@ -150,14 +147,14 @@ async function readCheckedFile(
   }
 
   try {
-    const descriptorStats = await handle.stat();
+    const descriptorStats = await handle.stat({ bigint: true });
     if (!descriptorStats.isFile()) {
       throw boundaryError(purpose, displayPath, "not-regular");
     }
 
-    let currentStats: Stats;
+    let currentStats: BigIntStats;
     try {
-      currentStats = await lstat(absolutePath);
+      currentStats = await lstat(absolutePath, { bigint: true });
     } catch {
       throw boundaryError(purpose, displayPath, "swap");
     }
@@ -211,9 +208,9 @@ function decodeUtf8(
 export async function inspectGitMarker(
   markerPath: string,
 ): Promise<GitMarkerEntry> {
-  let initialStats: Stats;
+  let initialStats: BigIntStats;
   try {
-    initialStats = await lstat(markerPath);
+    initialStats = await lstat(markerPath, { bigint: true });
   } catch (error) {
     if (isMissing(error)) {
       return { kind: "missing" };
@@ -228,7 +225,7 @@ export async function inspectGitMarker(
   if (initialStats.isDirectory()) {
     try {
       await realpath(markerPath);
-      const currentStats = await lstat(markerPath);
+      const currentStats = await lstat(markerPath, { bigint: true });
       if (
         !currentStats.isDirectory() ||
         !sameFile(initialStats, currentStats)
@@ -266,9 +263,9 @@ export async function readInstructionFile(
   displayPath: string,
   maxBytes: number,
 ): Promise<BoundedTextFile | undefined> {
-  let initialStats: Stats;
+  let initialStats: BigIntStats;
   try {
-    initialStats = await lstat(absolutePath);
+    initialStats = await lstat(absolutePath, { bigint: true });
   } catch (error) {
     if (isMissing(error)) {
       return undefined;

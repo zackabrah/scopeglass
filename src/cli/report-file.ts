@@ -1,4 +1,4 @@
-import { type Stats } from "node:fs";
+import { type BigIntStats } from "node:fs";
 import { lstat, open, realpath, unlink } from "node:fs/promises";
 import path from "node:path";
 
@@ -7,19 +7,16 @@ import {
   normalizeDisplayPath,
 } from "../analysis/paths.js";
 import { ScopeglassError } from "../error.js";
+import { sameFile } from "../file-identity.js";
 
 interface ParentIdentity {
   realPath: string;
-  stats: Stats;
+  stats: BigIntStats;
 }
 
 interface DescendantLocation {
   realCwd: string;
   relativeParent: string;
-}
-
-function sameFile(left: Stats, right: Stats): boolean {
-  return left.dev === right.dev && left.ino === right.ino;
 }
 
 function reportWriteError(
@@ -35,10 +32,10 @@ async function descendantLocation(
   displayPath: string,
 ): Promise<DescendantLocation | undefined> {
   let realCwd: string;
-  let realCwdStats: Stats;
+  let realCwdStats: BigIntStats;
   try {
     realCwd = await realpath(lexicalCwd);
-    realCwdStats = await lstat(realCwd);
+    realCwdStats = await lstat(realCwd, { bigint: true });
   } catch {
     throw reportWriteError(
       displayPath,
@@ -56,7 +53,7 @@ async function descendantLocation(
 
   for (;;) {
     try {
-      const candidateStats = await lstat(candidateAncestor);
+      const candidateStats = await lstat(candidateAncestor, { bigint: true });
       if (
         !candidateStats.isSymbolicLink() &&
         candidateStats.isDirectory() &&
@@ -101,9 +98,9 @@ async function validateDescendantComponents(
 
   for (const component of descendant.relativeParent.split(path.sep)) {
     currentPath = path.join(currentPath, component);
-    let stats: Stats;
+    let stats: BigIntStats;
     try {
-      stats = await lstat(currentPath);
+      stats = await lstat(currentPath, { bigint: true });
     } catch {
       throw reportWriteError(
         displayPath,
@@ -128,7 +125,7 @@ async function validateParent(
   await validateDescendantComponents(cwd, parentPath, displayPath);
 
   try {
-    const initialStats = await lstat(parentPath);
+    const initialStats = await lstat(parentPath, { bigint: true });
     if (initialStats.isSymbolicLink() || !initialStats.isDirectory()) {
       throw reportWriteError(
         displayPath,
@@ -137,7 +134,7 @@ async function validateParent(
     }
 
     const parentRealPath = await realpath(parentPath);
-    const currentStats = await lstat(parentPath);
+    const currentStats = await lstat(parentPath, { bigint: true });
     if (!currentStats.isDirectory() || !sameFile(initialStats, currentStats)) {
       throw reportWriteError(
         displayPath,
@@ -159,14 +156,14 @@ async function validateParent(
 
 async function removeOwnedFile(
   outputPath: string,
-  createdStats: Stats | undefined,
+  createdStats: BigIntStats | undefined,
 ): Promise<void> {
   if (createdStats === undefined) {
     return;
   }
 
   try {
-    const currentStats = await lstat(outputPath);
+    const currentStats = await lstat(outputPath, { bigint: true });
     if (currentStats.isFile() && sameFile(currentStats, createdStats)) {
       await unlink(outputPath);
     }
@@ -195,12 +192,12 @@ export async function writeReportFile(
     );
   }
 
-  let createdStats: Stats | undefined;
+  let createdStats: BigIntStats | undefined;
   let failure: unknown;
 
   try {
-    createdStats = await handle.stat();
-    const pathStats = await lstat(outputPath);
+    createdStats = await handle.stat({ bigint: true });
+    const pathStats = await lstat(outputPath, { bigint: true });
     if (
       !createdStats.isFile() ||
       !pathStats.isFile() ||

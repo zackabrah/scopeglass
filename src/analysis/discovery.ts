@@ -1,8 +1,10 @@
+import { type BigIntStats } from "node:fs";
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { ANALYSIS_LIMITS } from "../constants.js";
 import { ScopeglassError } from "../error.js";
+import { sameFile } from "../file-identity.js";
 import type { AnalyzeOptions, RootDiscovery } from "../types.js";
 import {
   containedRelativePath,
@@ -57,23 +59,16 @@ function isMissing(error: unknown): boolean {
   return code === "ENOENT" || code === "ENOTDIR";
 }
 
-function sameFile(
-  left: Awaited<ReturnType<typeof lstat>>,
-  right: Awaited<ReturnType<typeof lstat>>,
-): boolean {
-  return left.dev === right.dev && left.ino === right.ino;
-}
-
 async function validateTarget(
   target: string,
   cwd: string,
 ): Promise<ValidatedTarget> {
   const lexicalPath = path.resolve(cwd, target);
   const cwdDisplay = normalizeDisplayPath(cwd, lexicalPath);
-  let initialStats: Awaited<ReturnType<typeof lstat>>;
+  let initialStats: BigIntStats;
 
   try {
-    initialStats = await lstat(lexicalPath);
+    initialStats = await lstat(lexicalPath, { bigint: true });
   } catch (error) {
     throw new ScopeglassError(
       isMissing(error) ? "target-not-found" : "unreadable-file",
@@ -107,7 +102,7 @@ async function validateTarget(
 
   try {
     const realPath = await realpath(lexicalPath);
-    const currentStats = await lstat(lexicalPath);
+    const currentStats = await lstat(lexicalPath, { bigint: true });
     if (
       currentStats.isSymbolicLink() ||
       !sameFile(initialStats, currentStats)
@@ -141,7 +136,7 @@ async function validateExplicitRoot(
   const displayPath = normalizeDisplayPath(cwd, lexicalPath);
 
   try {
-    const initialStats = await lstat(lexicalPath);
+    const initialStats = await lstat(lexicalPath, { bigint: true });
     if (initialStats.isSymbolicLink() || !initialStats.isDirectory()) {
       throw new ScopeglassError(
         "invalid-root",
@@ -151,7 +146,7 @@ async function validateExplicitRoot(
     }
 
     const realPath = await realpath(lexicalPath);
-    const currentStats = await lstat(lexicalPath);
+    const currentStats = await lstat(lexicalPath, { bigint: true });
     if (!currentStats.isDirectory() || !sameFile(initialStats, currentStats)) {
       throw new ScopeglassError(
         "invalid-root",
