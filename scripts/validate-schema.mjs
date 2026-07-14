@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -14,29 +15,82 @@ const fixtureRoot = path.join(
   "fixtures",
   "hero-repository",
 );
-const schemaPath = path.join(
+const reportSchemaPath = path.join(
   repositoryRoot,
   "schemas",
   "scopeglass-report-v1.schema.json",
 );
-const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+const checkResultSchemaPath = path.join(
+  repositoryRoot,
+  "schemas",
+  "scopeglass-check-result-v1.schema.json",
+);
+const reportSchema = JSON.parse(await readFile(reportSchemaPath, "utf8"));
+const checkResultSchema = JSON.parse(
+  await readFile(checkResultSchemaPath, "utf8"),
+);
 
 const ajv = new Ajv2020({ allErrors: true, strict: true });
-const validate = ajv.compile(schema);
+ajv.addSchema(reportSchema);
+const validateReport = ajv.getSchema(reportSchema.$id);
+const validateCheckResult = ajv.compile(checkResultSchema);
+if (validateReport === undefined) {
+  throw new Error("The report schema could not be registered by its $id.");
+}
 const { analyze } = await import(
   pathToFileURL(path.join(repositoryRoot, "dist", "index.js")).href
 );
-const report = await analyze(
-  path.join(fixtureRoot, "packages", "payments", "src", "charge.ts"),
-  { root: fixtureRoot },
+const fixtureTarget = path.join(
+  fixtureRoot,
+  "packages",
+  "payments",
+  "src",
+  "charge.ts",
 );
+const report = await analyze(fixtureTarget, { root: fixtureRoot });
 
-if (!validate(report)) {
+if (!validateReport(report)) {
   throw new Error(
-    `Generated golden report does not match the shipped Draft 2020-12 schema:\n${JSON.stringify(validate.errors, undefined, 2)}`,
+    `Generated golden report does not match the shipped Draft 2020-12 schema:\n${JSON.stringify(validateReport.errors, undefined, 2)}`,
+  );
+}
+
+const checkExecution = spawnSync(
+  process.execPath,
+  [
+    path.join(repositoryRoot, "dist", "cli.js"),
+    "check",
+    fixtureTarget,
+    "--root",
+    fixtureRoot,
+    "--format",
+    "json",
+    "--fail-on",
+    "error",
+    "--max-tokens",
+    "0",
+  ],
+  {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    env: { ...process.env, NO_COLOR: "1" },
+  },
+);
+if (checkExecution.error !== undefined) {
+  throw checkExecution.error;
+}
+if (checkExecution.status !== 1 || checkExecution.stderr !== "") {
+  throw new Error(
+    "The golden check command did not produce a clean policy-failure payload.",
+  );
+}
+const checkResult = JSON.parse(checkExecution.stdout);
+if (!validateCheckResult(checkResult)) {
+  throw new Error(
+    `Generated golden check result does not match the shipped Draft 2020-12 schema:\n${JSON.stringify(validateCheckResult.errors, undefined, 2)}`,
   );
 }
 
 process.stdout.write(
-  `Validated generated golden report against ${path.relative(repositoryRoot, schemaPath)}.\n`,
+  `Validated generated golden report and check result against ${path.relative(repositoryRoot, reportSchemaPath)} and ${path.relative(repositoryRoot, checkResultSchemaPath)}.\n`,
 );

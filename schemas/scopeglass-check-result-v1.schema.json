@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scopeglass:schema:check-result:v1",
+  "title": "Scopeglass Check Result v1",
+  "description": "Deterministic Scopeglass report and policy-evaluation result.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "rulesetVersion", "report", "policy"],
+  "properties": {
+    "kind": {
+      "const": "scopeglass-check"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "rulesetVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "report": {
+      "$ref": "urn:scopeglass:schema:report:v1"
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "failOn", "failures"],
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+        "failOn": {
+          "enum": ["error", "warning", "info", "never"]
+        },
+        "maxTokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "failures": {
+          "type": "array",
+          "enum": [
+            [],
+            ["diagnostics"],
+            ["max-tokens"],
+            ["diagnostics", "max-tokens"]
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["passed"],
+            "properties": {
+              "passed": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "failures": {
+                "const": []
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "failures": {
+                "not": {
+                  "const": []
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "maxTokens": false
+            }
+          },
+          "then": {
+            "properties": {
+              "failures": {
+                "enum": [[], ["diagnostics"]]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["failOn"],
+            "properties": {
+              "failOn": {
+                "const": "never"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "failures": {
+                "enum": [[], ["max-tokens"]]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

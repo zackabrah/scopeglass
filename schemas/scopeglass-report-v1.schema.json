@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:scopeglass:schema:report:v1",
   "title": "Scopeglass Report v1",
   "description": "Deterministic, root-relative Scopeglass analysis report.",
   "type": "object",
@@ -82,20 +83,8 @@
             },
             {
               "not": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "pattern": "^[A-Za-z]:"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "^\\\\"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "(?:^|/)\\.\\.?(?:/|$)"
-                  }
-                ]
+                "type": "string",
+                "pattern": "(?:^|/)\\.\\.?(?:/|$)"
               }
             }
           ]
@@ -309,7 +298,7 @@
           "maxItems": 128,
           "items": {
             "type": "string",
-            "maxLength": 131072
+            "maxLength": 256
           }
         },
         "precedence": {

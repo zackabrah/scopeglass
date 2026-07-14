@@ -39,15 +39,22 @@
       "import": "./dist/index.js"
     },
     "./schema/report-v1.json": "./schemas/scopeglass-report-v1.schema.json",
+    "./schema/check-result-v1.json": "./schemas/scopeglass-check-result-v1.schema.json",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "schemas",
+    "docs",
+    "AGENTS.md",
     "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
     "LICENSE",
     "README.md",
-    "SECURITY.md"
+    "SECURITY.md",
+    "SPEC.md",
+    "tasks/plan.md"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/cli.ts --format esm --dts --sourcemap --clean --target node22 --platform node",
@@ -60,6 +67,8 @@
     "format:check": "prettier --check . --ignore-path .gitignore",
     "typecheck": "tsc --noEmit",
     "schema:check": "node scripts/validate-schema.mjs",
+    "browser:install": "node node_modules/playwright-core/cli.js install chromium firefox webkit",
+    "browser:check": "npm run build && node scripts/browser-qa.mjs",
     "package:pack": "node scripts/pack-package.mjs",
     "package:check": "npm run package:pack && node scripts/verify-package.mjs",
     "release:check": "node scripts/check-release-tag.mjs",
@@ -79,7 +88,9 @@
     "@types/node": "22.20.1",
     "@vitest/coverage-v8": "4.1.10",
     "ajv": "8.20.0",
+    "axe-core": "4.12.1",
     "eslint": "10.7.0",
+    "playwright-core": "1.61.1",
     "prettier": "3.9.5",
     "publint": "0.3.21",
     "tsup": "8.5.1",
