@@ -200,11 +200,14 @@ a security boundary.
 
 ## Verification status
 
-The source candidate has local automated evidence for parsing, discovery, path
-safety, limits, diagnostics, rendering, CLI behavior, cross-browser review,
-dependency audits, and exact-tarball packaging. Hosted operating-system/Node
-matrix results, protected-environment approval, provenance, and registry
-publication remain external release gates described in
+The source candidate has local and hosted automated evidence for parsing,
+discovery, path safety, limits, diagnostics, rendering, CLI behavior,
+cross-browser review, dependency audits, and exact-tarball packaging. Hosted CI
+is green across Linux, macOS, and Windows on the supported Node.js matrix. The
+bootstrap registry tarball was checksum-verified, private vulnerability
+reporting is enabled, and publishing uses a protected environment plus
+stage-only OIDC trust. Final v0.1.0 staged-candidate approval, provenance, and
+post-publication verification remain tag-time gates described in
 [RELEASE.md](RELEASE.md).
 
 The architectural rationale for keeping the pipeline local and deterministic

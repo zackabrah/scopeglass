@@ -9,10 +9,24 @@ local Markdown references, and flags exact duplicates or narrowly matched
 possible conflicts. The same deterministic report can be rendered for a human,
 consumed as JSON, or saved as a self-contained HTML file.
 
-> **Release status:** v0.1.0 is a verified source candidate. Hosted CI is active
-> on the public repository. The package has not been published to npm; the
-> protected npm environment, trusted-publisher configuration, provenance, and
-> registry verification remain release gates.
+> **Release status:** v0.1.0 is the first public release. Stable tarballs are
+> verified in a protected GitHub workflow, staged through npm trusted publishing
+> with OIDC provenance, and published only after explicit maintainer 2FA approval.
+
+## Install
+
+Scopeglass requires Node.js 22.17.0 or newer.
+
+```sh
+npm install --global scopeglass
+scopeglass --help
+```
+
+For the ESM API and exported JSON Schemas, install it as a project dependency:
+
+```sh
+npm install scopeglass
+```
 
 ## The five-minute value
 
