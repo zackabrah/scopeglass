@@ -208,12 +208,12 @@ Linux, macOS, and Windows on the supported Node.js matrix.
 The protected tag workflow staged the release through OIDC, and explicit npm
 2FA approval published the exact 94,620-byte candidate with SHA-256
 `00ae4ec8f9a448a149759906e29d7d6a706655689c7acda5ec824732b9463def`.
-The preserved workflow artifact, npm stage, public registry tarball, and
-immutable GitHub release asset were byte-identical. Registry install, CLI, API,
-schema, audit, signature, and SLSA provenance checks passed. The temporary
-bootstrap dist-tag was removed and its placeholder version was deprecated.
-Private vulnerability reporting remains enabled. See the completed evidence in
-[RELEASE.md](RELEASE.md).
+The tarball preserved inside the workflow artifact, npm stage, public registry
+tarball, and immutable GitHub release asset were byte-identical. Registry
+install, CLI, API, schema, audit, signature, and SLSA provenance checks passed.
+The temporary bootstrap dist-tag was removed and its placeholder version was
+deprecated. Private vulnerability reporting remains enabled. See the completed
+evidence in [RELEASE.md](RELEASE.md).
 
 The architectural rationale for keeping the pipeline local and deterministic
 is recorded in

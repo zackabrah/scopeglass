@@ -77,9 +77,9 @@ Local verification on 2026-07-14:
   verified the immutable `v0.1.0` tag, preserved the exact candidate, and
   staged it with OIDC provenance.
 - npm stage `921ca987-657d-406a-85ea-4a2e6d9fa494` was inspected and approved
-  with 2FA. The local candidate, workflow artifact, stage, public registry
-  tarball, and GitHub release asset were byte-identical: 94,620 bytes, 24 files,
-  SHA-256
+  with 2FA. The local candidate, tarball preserved inside the workflow artifact,
+  stage, public registry tarball, and GitHub release asset were byte-identical:
+  94,620 bytes, 24 files, SHA-256
   `00ae4ec8f9a448a149759906e29d7d6a706655689c7acda5ec824732b9463def`.
 - Clean registry CLI, API, schema, vulnerability, signature, and provenance
   checks passed. `latest` resolves to `0.1.0`; the bootstrap dist-tag was
