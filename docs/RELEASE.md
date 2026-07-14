@@ -345,7 +345,7 @@ exposing exploit details prematurely.
   including the verified tarball and checksum manifest
 - Known limitations: see [README.md](../README.md#the-five-minute-value), the
   [hard limits](../README.md#hard-limits), and the
-  [security design](SECURITY.md#known-limits-and-residual-risk)
+  [security design](SECURITY.md#known-limitations)
 
 ## Release record template
 
