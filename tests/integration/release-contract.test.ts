@@ -31,6 +31,21 @@ const packageJsonPath = fileURLToPath(
 );
 const temporaryDirectories: TempDirectory[] = [];
 
+function createChildEnvironment(
+  overrides: Record<string, string>,
+  inherited: NodeJS.ProcessEnv = process.env,
+) {
+  const overriddenKeys = new Set(
+    Object.keys(overrides).map((key) => key.toLowerCase()),
+  );
+  const inheritedEntries = Object.entries(inherited).filter(
+    ([key, value]) =>
+      value !== undefined && !overriddenKeys.has(key.toLowerCase()),
+  );
+
+  return { ...Object.fromEntries(inheritedEntries), ...overrides };
+}
+
 async function runReleaseCheck(changelog: string, refName = "v0.1.0") {
   const directory = await createTempDirectory();
   temporaryDirectories.push(directory);
@@ -102,8 +117,7 @@ async function runStageCommand(npmVersion = "11.18.0") {
   const result = spawnSync(process.execPath, [scriptPath], {
     cwd: directory.path,
     encoding: "utf8",
-    env: {
-      ...process.env,
+    env: createChildEnvironment({
       ACTIONS_ID_TOKEN_REQUEST_TOKEN: "test-token",
       ACTIONS_ID_TOKEN_REQUEST_URL: "https://example.invalid/id-token",
       CAPTURE_PATH: capturedArgumentsPath,
@@ -114,7 +128,7 @@ async function runStageCommand(npmVersion = "11.18.0") {
       GITHUB_SERVER_URL: "https://github.com",
       npm_config_user_agent: `npm/${npmVersion} node/v24.0.0 linux x64`,
       npm_execpath: npmStubPath,
-    },
+    }),
   });
 
   return {
@@ -136,6 +150,26 @@ afterEach(async () => {
 });
 
 describe("release contract", () => {
+  it("overrides inherited npm environment keys case-insensitively", () => {
+    const environment = createChildEnvironment(
+      {
+        npm_config_user_agent: "npm/11.18.0",
+        npm_execpath: "capture-npm.mjs",
+      },
+      {
+        NPM_EXECPATH: "real-npm-cli.js",
+        Npm_Config_User_Agent: "npm/10.9.8",
+        PATH: "preserved-path",
+      },
+    );
+
+    expect(environment).toEqual({
+      npm_config_user_agent: "npm/11.18.0",
+      npm_execpath: "capture-npm.mjs",
+      PATH: "preserved-path",
+    });
+  });
+
   it("forces LF checkouts for text files on every operating system", async () => {
     const attributes = await readFile(gitAttributesPath, "utf8");
 
@@ -200,7 +234,7 @@ describe("release contract", () => {
       tarballPath,
     } = await runStageCommand();
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
     expect(npmArguments).toEqual([
       "stage",
