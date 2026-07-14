@@ -16,7 +16,7 @@ self-contained HTML report.
 ### Assumptions approved for this build
 
 - The public package and executable are both named `scopeglass`.
-- Node.js `>=22.12.0` and ESM are acceptable distribution requirements.
+- Node.js `>=22.13.0` and ESM are acceptable distribution requirements.
 - TypeScript is the implementation language.
 - v1 models the canonical AGENTS.md ancestor-scope convention only. Vendor
   aliases, global instructions, skills, and proprietary rule formats are out of
@@ -48,11 +48,11 @@ scopeglass check src/payments/charge.ts --fail-on warning --max-tokens 8000
 `target` defaults to `.` and must already exist. Relative targets and `--root`
 values resolve from the process working directory.
 
-| Command | Output | Options | Success behavior |
-| --- | --- | --- | --- |
-| `inspect [target]` | Terminal by default; JSON with `--format json` | `--root`, `--format terminal\|json`, `--no-color` | Exit 0 after successful analysis even when diagnostics exist. |
-| `report [target]` | HTML file at `scopeglass.html` by default; HTML stdout when `--output -` | `--root`, `--output` | Exit 0 after a complete write. File status is printed to stderr, never stdout. |
-| `check [target]` | Terminal by default; `ScopeglassCheckResultV1` with `--format json` | `--root`, `--format terminal\|json`, `--fail-on error\|warning\|info\|never`, `--max-tokens <integer>`, `--no-color` | Exit 0 when all enabled policies pass; exit 1 when any enabled policy fails. |
+| Command            | Output                                                                   | Options                                                                                                              | Success behavior                                                               |
+| ------------------ | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `inspect [target]` | Terminal by default; JSON with `--format json`                           | `--root`, `--format terminal\|json`, `--no-color`                                                                    | Exit 0 after successful analysis even when diagnostics exist.                  |
+| `report [target]`  | HTML file at `scopeglass.html` by default; HTML stdout when `--output -` | `--root`, `--output`                                                                                                 | Exit 0 after a complete write. File status is printed to stderr, never stdout. |
+| `check [target]`   | Terminal by default; `ScopeglassCheckResultV1` with `--format json`      | `--root`, `--format terminal\|json`, `--fail-on error\|warning\|info\|never`, `--max-tokens <integer>`, `--no-color` | Exit 0 when all enabled policies pass; exit 1 when any enabled policy fails.   |
 
 Global behavior:
 
@@ -75,25 +75,25 @@ the analyzed root because it is an explicit CLI destination, but the no-follow
 and exclusive-create rules still apply.
 
 `check` severity order is `error > warning > info`. `--fail-on warning` means a
-warning *or error* fails the check. The default is `--fail-on error`.
+warning _or error_ fails the check. The default is `--fail-on error`.
 `--fail-on never` disables diagnostic gating. `--max-tokens` accepts a safe
 non-negative integer; a total equal to the budget passes and a total greater
 than the budget fails. Diagnostic and token policies combine with logical OR:
 
-| Diagnostic policy | Token policy | Exit |
-| --- | --- | --- |
-| pass/disabled | pass/disabled | 0 |
-| fail | pass/disabled | 1 |
-| pass/disabled | fail | 1 |
-| fail | fail | 1 |
+| Diagnostic policy | Token policy  | Exit |
+| ----------------- | ------------- | ---- |
+| pass/disabled     | pass/disabled | 0    |
+| fail              | pass/disabled | 1    |
+| pass/disabled     | fail          | 1    |
+| fail              | fail          | 1    |
 
 ### Exit codes
 
-| Code | Meaning |
-| --- | --- |
-| `0` | Analysis completed and policy passed. |
-| `1` | Analysis completed but `check` policy failed. |
-| `2` | Invalid arguments, unsafe path, unreadable input, or unexpected runtime failure. |
+| Code | Meaning                                                                          |
+| ---- | -------------------------------------------------------------------------------- |
+| `0`  | Analysis completed and policy passed.                                            |
+| `1`  | Analysis completed but `check` policy failed.                                    |
+| `2`  | Invalid arguments, unsafe path, unreadable input, or unexpected runtime failure. |
 
 ### Programmatic API
 
@@ -235,7 +235,7 @@ Terminal wording is not a machine contract; consumers use JSON codes and fields.
 
 ## Tech stack
 
-- Runtime: Node.js `>=22.12.0`, ESM.
+- Runtime: Node.js `>=22.13.0`, ESM.
 - Language/build: TypeScript 6.0.3, tsup.
 - CLI: Commander 15.
 - Markdown AST: `mdast-util-from-markdown`.
@@ -293,9 +293,22 @@ tasks/            Implementation plan and live checklist
 
 ```ts
 export type Diagnostic =
-  | { code: "duplicate-instruction"; severity: "info"; instructionIds: string[] }
-  | { code: "possible-conflict"; severity: "info"; instructionIds: [string, string] }
-  | { code: "broken-reference"; severity: "error"; source: SourceLocation; target: string };
+  | {
+      code: "duplicate-instruction";
+      severity: "info";
+      instructionIds: string[];
+    }
+  | {
+      code: "possible-conflict";
+      severity: "info";
+      instructionIds: [string, string];
+    }
+  | {
+      code: "broken-reference";
+      severity: "error";
+      source: SourceLocation;
+      target: string;
+    };
 ```
 
 ## Analysis behavior
@@ -336,17 +349,17 @@ symlink swaps.
 
 ### Hard analysis limits
 
-| Limit | Value | Behavior when exceeded |
-| --- | --- | --- |
-| Scope files | 64 | Fatal `scope-limit-exceeded`. |
-| One AGENTS.md | 1,048,576 bytes | Exactly the limit passes; one byte over is fatal `file-too-large`. |
-| Combined AGENTS.md bytes | 4,194,304 bytes | Fatal `total-too-large`. |
-| Extracted instructions | 4,096 | Fatal `instruction-limit-exceeded`. |
-| One extracted instruction | 131,072 Unicode code points | Fatal `instruction-too-long`. |
-| Local references | 2,048 | Fatal `reference-limit-exceeded`. |
-| Markdown AST depth | 128 | Fatal `markdown-depth-exceeded`. |
-| Diagnostics | 4,096 | Fatal `diagnostic-limit-exceeded`. |
-| Rendered terminal/JSON/HTML bytes | 33,554,432 | Fatal `output-too-large`. |
+| Limit                             | Value                       | Behavior when exceeded                                             |
+| --------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| Scope files                       | 64                          | Fatal `scope-limit-exceeded`.                                      |
+| One AGENTS.md                     | 1,048,576 bytes             | Exactly the limit passes; one byte over is fatal `file-too-large`. |
+| Combined AGENTS.md bytes          | 4,194,304 bytes             | Fatal `total-too-large`.                                           |
+| Extracted instructions            | 4,096                       | Fatal `instruction-limit-exceeded`.                                |
+| One extracted instruction         | 131,072 Unicode code points | Fatal `instruction-too-long`.                                      |
+| Local references                  | 2,048                       | Fatal `reference-limit-exceeded`.                                  |
+| Markdown AST depth                | 128                         | Fatal `markdown-depth-exceeded`.                                   |
+| Diagnostics                       | 4,096                       | Fatal `diagnostic-limit-exceeded`.                                 |
+| Rendered terminal/JSON/HTML bytes | 33,554,432                  | Fatal `output-too-large`.                                          |
 
 No whole-repository enumeration or pairwise instruction comparison occurs.
 
@@ -367,7 +380,7 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   extraction, punctuation-to-space, and collapsed whitespace. Duplicate groups
   are informational and retain every source.
 - Possible conflicts are intentionally narrow and informational: only rules
-  with opposite leading polarity and an otherwise *exact* normalized core are
+  with opposite leading polarity and an otherwise _exact_ normalized core are
   paired. Recognized negative prefixes are `do not`, `don't`, `never`,
   `must not`, `should not`, `avoid`, `forbid`, and `disallow`; positive modal or
   action prefixes (`always`, `must`, `should`, `use`, `prefer`, `require`,
@@ -405,11 +418,14 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   `<details>` for disclosure. Repository text is contextually escaped and never
   becomes an attribute, URL, style, or raw HTML value.
 - Repository-authored links are displayed as inert text, not clickable anchors.
-- Internal DOM IDs come only from trusted counters. CSP is `default-src 'none';
-  base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none';
-  img-src data:; script-src 'none'; style-src 'unsafe-inline'; form-action
-  'none'; frame-ancestors 'none'`. Report text uses `unicode-bidi: plaintext`.
-  There are no remote assets or network-capable elements.
+- Internal DOM IDs come only from trusted counters. The exact CSP is:
+
+  ```text
+  default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; script-src 'none'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'
+  ```
+
+  Report text uses `unicode-bidi: plaintext`. There are no remote assets or
+  network-capable elements.
 
 ## Testing strategy
 
@@ -460,8 +476,8 @@ Primary abuse cases and controls:
   gutter and dangerous controls/default-ignorables are visibly escaped.
 - Output clobbering → exclusive no-follow creation, a real parent directory,
   private permissions, fsync, and no overwrite mode.
-- Supply-chain compromise → three pinned runtime dependencies, lockfile, `npm
-  ci`, high-severity audit, immutable action SHAs, least-privilege workflow
+- Supply-chain compromise → three pinned runtime dependencies, lockfile, clean
+  `npm ci`, high-severity audit, immutable action SHAs, least-privilege workflow
   permissions, OIDC trusted publishing/provenance, and publication of the exact
   tarball verified in CI.
 

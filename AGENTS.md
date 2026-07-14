@@ -30,7 +30,10 @@ plan is `tasks/plan.md`.
 - Prefer small focused modules and explicit data flow over framework patterns.
 
 ```ts
-export function normalizeDisplayPath(root: string, absolutePath: string): string {
+export function normalizeDisplayPath(
+  root: string,
+  absolutePath: string,
+): string {
   return path.relative(root, absolutePath).split(path.sep).join("/") || ".";
 }
 ```

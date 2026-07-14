@@ -1,0 +1,459 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Scopeglass Report v1",
+  "description": "Deterministic, root-relative Scopeglass analysis report.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "rulesetVersion",
+    "root",
+    "rootDiscovery",
+    "target",
+    "tokenEstimate",
+    "scopes",
+    "instructions",
+    "diagnostics",
+    "summary"
+  ],
+  "properties": {
+    "kind": {
+      "const": "scopeglass-report"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "rulesetVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "root": {
+      "const": "."
+    },
+    "rootDiscovery": {
+      "$ref": "#/$defs/rootDiscovery"
+    },
+    "target": {
+      "$ref": "#/$defs/relativePath"
+    },
+    "tokenEstimate": {
+      "$ref": "#/$defs/reportTokenEstimate"
+    },
+    "scopes": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/scopeRecord"
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "#/$defs/instructionRecord"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "$ref": "#/$defs/diagnosticRecord"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    }
+  },
+  "$defs": {
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "anyOf": [
+        {
+          "const": "."
+        },
+        {
+          "allOf": [
+            {
+              "type": "string",
+              "pattern": "^[^/\\u0000]+(?:/[^/\\u0000]+)*$"
+            },
+            {
+              "not": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[A-Za-z]:"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\\\"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "(?:^|/)\\.\\.?(?:/|$)"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "agentsPath": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/relativePath"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?:AGENTS\\.md|(?:[^/]+/)+AGENTS\\.md)$"
+        }
+      ]
+    },
+    "sourceLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "startLine", "endLine"],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/agentsPath"
+        },
+        "startLine": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      }
+    },
+    "reportTokenEstimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "bytes", "total"],
+      "properties": {
+        "method": {
+          "const": "utf8-bytes-div-3"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4194304
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1398102
+        }
+      }
+    },
+    "scopeTokenEstimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "bytes", "total"],
+      "properties": {
+        "method": {
+          "const": "utf8-bytes-div-3"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 349526
+        }
+      }
+    },
+    "instructionTokenEstimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "bytes", "total"],
+      "properties": {
+        "method": {
+          "const": "utf8-bytes-div-3"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 524288
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 174763
+        }
+      }
+    },
+    "rootDiscovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "enum": ["explicit", "git-directory", "git-file", "target-fallback"]
+        },
+        "marker": {
+          "const": ".git"
+        }
+      },
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "marker"],
+          "properties": {
+            "method": {
+              "enum": ["git-directory", "git-file"]
+            },
+            "marker": {
+              "const": ".git"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method"],
+          "properties": {
+            "method": {
+              "enum": ["explicit", "target-fallback"]
+            }
+          }
+        }
+      ]
+    },
+    "scopeRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "directory",
+        "depth",
+        "precedence",
+        "tokenEstimate",
+        "instructionIds"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "path": {
+          "$ref": "#/$defs/agentsPath"
+        },
+        "directory": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "precedence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "tokenEstimate": {
+          "$ref": "#/$defs/scopeTokenEstimate"
+        },
+        "instructionIds": {
+          "type": "array",
+          "maxItems": 4096,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "instructionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "scopeId",
+        "kind",
+        "text",
+        "section",
+        "precedence",
+        "source",
+        "tokenEstimate"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "scopeId": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": ["paragraph", "list-item", "blockquote"]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 131072
+        },
+        "section": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "maxLength": 131072
+          }
+        },
+        "precedence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "source": {
+          "$ref": "#/$defs/sourceLocation"
+        },
+        "tokenEstimate": {
+          "$ref": "#/$defs/instructionTokenEstimate"
+        }
+      }
+    },
+    "diagnosticRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "code",
+        "severity",
+        "message",
+        "sources",
+        "instructionIds"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "code": {
+          "enum": [
+            "broken-reference",
+            "unsafe-reference",
+            "duplicate-instruction",
+            "possible-conflict"
+          ]
+        },
+        "severity": {
+          "enum": ["error", "warning", "info"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/sourceLocation"
+          }
+        },
+        "instructionIds": {
+          "type": "array",
+          "maxItems": 4096,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "required": ["code"],
+            "properties": {
+              "code": {
+                "enum": ["broken-reference", "unsafe-reference"]
+              }
+            }
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "severity": {
+                "const": "error"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "required": ["code"],
+            "properties": {
+              "code": {
+                "enum": ["duplicate-instruction", "possible-conflict"]
+              }
+            }
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "severity": {
+                "const": "info"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scopeCount",
+        "instructionCount",
+        "errorCount",
+        "warningCount",
+        "infoCount"
+      ],
+      "properties": {
+        "scopeCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "instructionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "errorCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "warningCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "infoCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        }
+      }
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

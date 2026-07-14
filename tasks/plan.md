@@ -210,15 +210,15 @@ package metadata.
 
 ## Risks and mitigations
 
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| Users mistake heuristics for model truth | High | Say “possible conflict,” show sources, document limits. |
-| Malicious Markdown injects report content | High | Escape by context, no innerHTML from data, strict CSP, attack tests. |
-| Symlink/path escape reads outside root | High | Realpath containment before every read, integration abuse tests. |
-| Parser drops source provenance | Medium | AST positions are contract-tested on nested constructs. |
-| Token figure is interpreted as universal | Medium | Name the heuristic everywhere, show exact bytes, and call tokens an estimate. |
-| CLI surface becomes difficult to evolve | Medium | Version JSON, stable codes, additive changes, integration tests. |
-| Dependency compromise | Medium | Three pinned runtime dependencies, lockfile, immutable CI actions, audit, OIDC provenance. |
+| Risk                                      | Impact | Mitigation                                                                                 |
+| ----------------------------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| Users mistake heuristics for model truth  | High   | Say “possible conflict,” show sources, document limits.                                    |
+| Malicious Markdown injects report content | High   | Escape by context, no innerHTML from data, strict CSP, attack tests.                       |
+| Symlink/path escape reads outside root    | High   | Realpath containment before every read, integration abuse tests.                           |
+| Parser drops source provenance            | Medium | AST positions are contract-tested on nested constructs.                                    |
+| Token figure is interpreted as universal  | Medium | Name the heuristic everywhere, show exact bytes, and call tokens an estimate.              |
+| CLI surface becomes difficult to evolve   | Medium | Version JSON, stable codes, additive changes, integration tests.                           |
+| Dependency compromise                     | Medium | Three pinned runtime dependencies, lockfile, immutable CI actions, audit, OIDC provenance. |
 
 ## Open questions
 
