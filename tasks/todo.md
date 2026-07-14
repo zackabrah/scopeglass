@@ -1,14 +1,14 @@
 # Scopeglass v1 Task Checklist
 
-- [ ] Task 1: Package tooling and public contracts
+- [x] Task 1: Package tooling and public contracts
   - Acceptance: reproducible toolchain, export allowlist, schema-v1 types,
     ruleset/error constants, ordering rules, and documented hard limits
   - Verify: focused contract test, typecheck, build
-- [ ] Task 2: Safe root, target, and scope discovery
+- [x] Task 2: Safe root, target, and scope discovery
   - Acceptance: exact root/marker semantics plus traversal, race, special-file,
     symlink/junction, aggregate-size, and host-path disclosure protections
   - Verify: path and filesystem integration tests
-- [ ] Checkpoint: foundation green and independently reviewed
+- [x] Checkpoint: foundation green and independently reviewed
 - [ ] Task 3: Markdown instruction/reference extraction
   - Acceptance: non-duplicated structured records, exact provenance, inert-link
     rules, and parser/instruction/reference bounds
@@ -45,4 +45,13 @@
 Record each meaningful command once after the relevant change. Do not repeat a
 successful command without intervening changes.
 
-- Pending.
+- `npm test -- tests/unit/public-contract.test.ts tests/unit/schema-contract.test.ts`
+  — 4 tests passed.
+- `npm run build` — ESM JavaScript, declarations, source maps, and CLI shebang
+  built successfully.
+- `npm audit --audit-level=low` — 0 vulnerabilities after the reviewed esbuild
+  override; production dependency audit also clean.
+- `npm test -- tests/integration/discovery.test.ts` — 14 tests passed, including
+  exact byte bounds, aggregate/scope limits, hostile markers, symlinks, BOM, and
+  no host-path leakage.
+- Scoped ESLint and strict TypeScript checks for discovery — passed.

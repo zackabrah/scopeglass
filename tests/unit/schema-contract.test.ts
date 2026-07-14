@@ -25,15 +25,15 @@ describe("report JSON Schema", () => {
     expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).not.toContain("generatedAt");
-    expect(schema.properties?.schemaVersion).toMatchObject({ const: 1 });
-    expect(schema.properties?.rulesetVersion).toMatchObject({ const: 1 });
-    expect(schema.properties?.scopes).toMatchObject({
+    expect(schema.properties?.["schemaVersion"]).toMatchObject({ const: 1 });
+    expect(schema.properties?.["rulesetVersion"]).toMatchObject({ const: 1 });
+    expect(schema.properties?.["scopes"]).toMatchObject({
       maxItems: ANALYSIS_LIMITS.maxScopes,
     });
-    expect(schema.properties?.instructions).toMatchObject({
+    expect(schema.properties?.["instructions"]).toMatchObject({
       maxItems: ANALYSIS_LIMITS.maxInstructions,
     });
-    expect(schema.properties?.diagnostics).toMatchObject({
+    expect(schema.properties?.["diagnostics"]).toMatchObject({
       maxItems: ANALYSIS_LIMITS.maxDiagnostics,
     });
   });
