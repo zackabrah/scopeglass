@@ -9,15 +9,14 @@ local Markdown references, and flags exact duplicates or narrowly matched
 possible conflicts. The same deterministic report can be rendered for a human,
 consumed as JSON, or saved as a self-contained HTML file.
 
-> **Release status:** v0.1.0 is a locally verified source candidate.
-> The deterministic build, exact-tarball checks, dependency audits, and
-> Chromium/Firefox/WebKit security and accessibility suite pass from this
-> checkout. The package has not been published to npm; hosted CI evidence and
-> trusted-publisher environment setup require the GitHub repository.
+> **Release status:** v0.1.0 is a verified source candidate. Hosted CI is active
+> on the public repository. The package has not been published to npm; the
+> protected npm environment, trusted-publisher configuration, provenance, and
+> registry verification remain release gates.
 
 ## The five-minute value
 
-From a source checkout, with Node.js 22.13 or newer:
+From a source checkout, with Node.js 22.17.0 or newer:
 
 ```sh
 npm ci
@@ -64,7 +63,7 @@ semantically overrides another.
 
 Requirements:
 
-- Node.js `>=22.13.0`
+- Node.js `>=22.17.0`
 - npm `10.9.8` for the repository's pinned development workflow
 
 ```sh

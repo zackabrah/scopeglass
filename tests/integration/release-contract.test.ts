@@ -15,8 +15,14 @@ const sourceScriptPath = fileURLToPath(
 const releaseWorkflowPath = fileURLToPath(
   new URL("../../.github/workflows/release.yml", import.meta.url),
 );
+const ciWorkflowPath = fileURLToPath(
+  new URL("../../.github/workflows/ci.yml", import.meta.url),
+);
 const gitAttributesPath = fileURLToPath(
   new URL("../../.gitattributes", import.meta.url),
+);
+const packageJsonPath = fileURLToPath(
+  new URL("../../package.json", import.meta.url),
 );
 const temporaryDirectories: TempDirectory[] = [];
 
@@ -56,6 +62,17 @@ describe("release contract", () => {
     const attributes = await readFile(gitAttributesPath, "utf8");
 
     expect(attributes.split(/\r?\n/u)).toContain("* text=auto eol=lf");
+  });
+
+  it("tests the exact minimum supported Node.js runtime in every CI job", async () => {
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
+      engines: { node: string };
+    };
+    const workflow = await readFile(ciWorkflowPath, "utf8");
+
+    expect(packageJson.engines.node).toBe(">=22.17.0");
+    expect(workflow).toContain("node: [22.17.0, 24.x, 26.x]");
+    expect(workflow).toContain("node-version: 22.17.0");
   });
 
   it("checks tracked and untracked source after verification and before publication", async () => {

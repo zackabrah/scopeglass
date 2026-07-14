@@ -22,6 +22,12 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
 - Bounded local processing, hostile-input controls, and exclusive private HTML
   report creation.
 
+### Changed
+
+- Raised the minimum supported Node.js version to 22.17.0 so Windows
+  file-identity checks run on a release containing the upstream libuv
+  volume-serial-number fix.
+
 ### Security
 
 - Repository content is never executed, fetched, imported, or sent off-device.
@@ -31,8 +37,9 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
   diagnostic normalization has per-instruction and aggregate budgets.
 - Local-reference checks cache shared path components while preserving
   component-wise symlink and final realpath containment validation.
+- File swap checks compare lossless `bigint` device and inode identifiers.
 
-The local browser, package, and audit gates pass. Final hosted
-release-candidate evidence, npm publication, and trusted-publisher
-configuration are not declared complete. Replace `Unreleased` with the release
-date only after every gate in [`docs/RELEASE.md`](docs/RELEASE.md) passes.
+The local browser, package, and audit gates pass, and hosted CI is active. npm
+publication, protected-environment approval, provenance, and registry evidence
+are not declared complete. Replace `Unreleased` with the release date only
+after every gate in [`docs/RELEASE.md`](docs/RELEASE.md) passes.

@@ -16,7 +16,7 @@ self-contained HTML report.
 ### Assumptions approved for this build
 
 - The public package and executable are both named `scopeglass`.
-- Node.js `>=22.13.0` and ESM are acceptable distribution requirements.
+- Node.js `>=22.17.0` and ESM are acceptable distribution requirements.
 - TypeScript is the implementation language.
 - v1 models the canonical AGENTS.md ancestor-scope convention only. Vendor
   aliases, global instructions, skills, and proprietary rule formats are out of
@@ -244,7 +244,7 @@ Terminal wording is not a machine contract; consumers use JSON codes and fields.
 
 ## Tech stack
 
-- Runtime: Node.js `>=22.13.0`, ESM.
+- Runtime: Node.js `>=22.17.0`, ESM.
 - Language/build: TypeScript 6.0.3, tsup.
 - CLI: Commander 15.
 - Markdown AST: `mdast-util-from-markdown`.

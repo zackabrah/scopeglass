@@ -24,7 +24,7 @@ explicit review.
 
 Requirements:
 
-- Node.js `>=22.13.0`
+- Node.js `>=22.17.0`
 - npm `10.9.8`, matching the repository `packageManager` field
 
 ```sh
