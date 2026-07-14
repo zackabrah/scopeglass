@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,6 +13,9 @@ import {
 
 const sourceScriptPath = fileURLToPath(
   new URL("../../scripts/check-release-tag.mjs", import.meta.url),
+);
+const publishScriptPath = fileURLToPath(
+  new URL("../../scripts/publish-package.mjs", import.meta.url),
 );
 const releaseWorkflowPath = fileURLToPath(
   new URL("../../.github/workflows/release.yml", import.meta.url),
@@ -51,6 +56,79 @@ async function runReleaseCheck(changelog: string, refName = "v0.1.0") {
   });
 }
 
+async function runStageCommand(npmVersion = "11.18.0") {
+  const directory = await createTempDirectory();
+  temporaryDirectories.push(directory);
+  const tarball = Buffer.from("verified candidate tarball");
+  const filename = "scopeglass-0.1.0.tgz";
+  const tarballPath = await directory.write(
+    path.join(".artifacts", filename),
+    tarball,
+  );
+  await directory.write(
+    "package.json",
+    `${JSON.stringify({
+      name: "scopeglass",
+      version: "0.1.0",
+      repository: {
+        url: "git+https://github.com/zackabrah/scopeglass.git",
+      },
+      publishConfig: { access: "public", provenance: true },
+    })}\n`,
+  );
+  await directory.write(
+    path.join(".artifacts", "manifest.json"),
+    `${JSON.stringify({
+      name: "scopeglass",
+      version: "0.1.0",
+      filename,
+      sha256: createHash("sha256").update(tarball).digest("hex"),
+      size: tarball.byteLength,
+    })}\n`,
+  );
+  const scriptPath = await directory.write(
+    "scripts/publish-package.mjs",
+    await readFile(publishScriptPath, "utf8"),
+  );
+  const capturedArgumentsPath = path.join(
+    directory.path,
+    "captured-npm-arguments.json",
+  );
+  const npmStubPath = await directory.write(
+    "capture-npm.mjs",
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(process.env.CAPTURE_PATH, JSON.stringify(process.argv.slice(2)));\n`,
+  );
+
+  const result = spawnSync(process.execPath, [scriptPath], {
+    cwd: directory.path,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: "test-token",
+      ACTIONS_ID_TOKEN_REQUEST_URL: "https://example.invalid/id-token",
+      CAPTURE_PATH: capturedArgumentsPath,
+      GITHUB_ACTIONS: "true",
+      GITHUB_REF_NAME: "v0.1.0",
+      GITHUB_REF_TYPE: "tag",
+      GITHUB_REPOSITORY: "zackabrah/scopeglass",
+      GITHUB_SERVER_URL: "https://github.com",
+      npm_config_user_agent: `npm/${npmVersion} node/v24.0.0 linux x64`,
+      npm_execpath: npmStubPath,
+    },
+  });
+
+  return {
+    arguments:
+      result.status === 0
+        ? (JSON.parse(
+            await readFile(capturedArgumentsPath, "utf8"),
+          ) as string[])
+        : [],
+    result,
+    tarballPath: await realpath(tarballPath),
+  };
+}
+
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) => directory.cleanup()),
@@ -75,23 +153,72 @@ describe("release contract", () => {
     expect(workflow).toContain("node-version: 22.17.0");
   });
 
-  it("checks tracked and untracked source after verification and before publication", async () => {
+  it("checks source, preserves the candidate, and stages only the verified tarball", async () => {
     const workflow = await readFile(releaseWorkflowPath, "utf8");
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
+      scripts: Record<string, string>;
+    };
     const verify = workflow.indexOf("- name: Build and verify package once");
     const clean = workflow.indexOf("- name: Verify checkout stayed clean");
-    const publish = workflow.indexOf(
-      "- name: Publish the verified tarball with provenance",
+    const preserve = workflow.indexOf(
+      "- name: Preserve verified package candidate",
+    );
+    const stage = workflow.indexOf(
+      "- name: Stage the verified tarball with provenance",
     );
 
     expect(verify).toBeGreaterThanOrEqual(0);
     expect(clean).toBeGreaterThan(verify);
-    expect(publish).toBeGreaterThan(clean);
-    expect(workflow.slice(clean, publish)).toContain("git diff --exit-code");
-    expect(workflow.slice(clean, publish)).toContain(
+    expect(preserve).toBeGreaterThan(clean);
+    expect(stage).toBeGreaterThan(preserve);
+    expect(workflow.slice(clean, stage)).toContain("git diff --exit-code");
+    expect(workflow.slice(clean, stage)).toContain(
       "git diff --cached --exit-code",
     );
-    expect(workflow.slice(clean, publish)).toContain(
+    expect(workflow.slice(clean, stage)).toContain(
       "git status --porcelain --untracked-files=normal",
+    );
+    expect(workflow.slice(preserve, stage)).toContain("path: .artifacts/");
+    expect(workflow.slice(preserve, stage)).toContain(
+      "if-no-files-found: error",
+    );
+    expect(workflow.slice(preserve, stage)).toContain(
+      "include-hidden-files: true",
+    );
+    expect(workflow.slice(stage)).toContain("npm run release:stage");
+    expect(workflow).not.toContain("npm run release:publish");
+    expect(packageJson.scripts["release:stage"]).toBe(
+      "node scripts/publish-package.mjs",
+    );
+    expect(packageJson.scripts).not.toHaveProperty("release:publish");
+  });
+
+  it("uses npm stage publish instead of direct publication", async () => {
+    const {
+      arguments: npmArguments,
+      result,
+      tarballPath,
+    } = await runStageCommand();
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(npmArguments).toEqual([
+      "stage",
+      "publish",
+      tarballPath,
+      "--access",
+      "public",
+      "--provenance",
+      "--ignore-scripts",
+    ]);
+  });
+
+  it("rejects npm versions that do not support staged publishing", async () => {
+    const { result } = await runStageCommand("11.14.9");
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "npm staged publishing requires npm 11.15.0 or newer.",
     );
   });
 

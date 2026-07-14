@@ -72,7 +72,7 @@
     "package:pack": "node scripts/pack-package.mjs",
     "package:check": "npm run package:pack && node scripts/verify-package.mjs",
     "release:check": "node scripts/check-release-tag.mjs",
-    "release:publish": "node scripts/publish-package.mjs",
+    "release:stage": "node scripts/publish-package.mjs",
     "audit": "npm audit --audit-level=high",
     "audit:signatures": "npm audit signatures",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run schema:check && npm run package:check"

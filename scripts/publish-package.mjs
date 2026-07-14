@@ -24,14 +24,14 @@ if (
   process.env.GITHUB_REF_NAME !== `v${packageJson.version}`
 ) {
   throw new Error(
-    "Publishing requires the matching v<package-version> GitHub tag.",
+    "Staging requires the matching v<package-version> GitHub tag.",
   );
 }
 if (
   process.env.ACTIONS_ID_TOKEN_REQUEST_URL === undefined ||
   process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN === undefined
 ) {
-  throw new Error("Publishing requires GitHub Actions OIDC permissions.");
+  throw new Error("Staging requires GitHub Actions OIDC permissions.");
 }
 const expectedRepositoryUrl = `git+${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}.git`;
 if (packageJson.repository?.url !== expectedRepositoryUrl) {
@@ -43,7 +43,7 @@ if (
   packageJson.publishConfig?.access !== "public" ||
   packageJson.publishConfig?.provenance !== true
 ) {
-  throw new Error("Publishing requires public access and provenance metadata.");
+  throw new Error("Staging requires public access and provenance metadata.");
 }
 if (
   manifest.name !== packageJson.name ||
@@ -67,23 +67,22 @@ const npmVersion = process.env.npm_config_user_agent?.match(
 );
 const npmMajor = Number(npmVersion?.[1]);
 const npmMinor = Number(npmVersion?.[2]);
-const npmPatch = Number(npmVersion?.[3]);
-const supportsTrustedPublishing =
-  npmMajor > 11 ||
-  (npmMajor === 11 && (npmMinor > 5 || (npmMinor === 5 && npmPatch >= 1)));
-if (!supportsTrustedPublishing) {
-  throw new Error("npm trusted publishing requires npm 11.5.1 or newer.");
+const supportsStagedPublishing =
+  npmMajor > 11 || (npmMajor === 11 && npmMinor >= 15);
+if (!supportsStagedPublishing) {
+  throw new Error("npm staged publishing requires npm 11.15.0 or newer.");
 }
 
 const npmExecPath = process.env.npm_execpath;
 if (npmExecPath === undefined) {
-  throw new Error("The publish script must be run through npm.");
+  throw new Error("The staging script must be run through npm.");
 }
 
 execFileSync(
   process.execPath,
   [
     npmExecPath,
+    "stage",
     "publish",
     tarballPath,
     "--access",
