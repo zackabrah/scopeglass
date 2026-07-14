@@ -1,6 +1,10 @@
 import picocolors from "picocolors";
 
-import type { DiagnosticSeverity, ScopeglassReportV1 } from "../types.js";
+import type {
+  DiagnosticSeverity,
+  ScopeglassCheckResultV1,
+  ScopeglassReportV1,
+} from "../types.js";
 import { assertOutputSize, visibleText } from "./shared.js";
 
 export interface TerminalRenderOptions {
@@ -96,4 +100,29 @@ export function renderTerminal(
   }
 
   return assertOutputSize(`${lines.join("\n")}\n`);
+}
+
+export function renderCheckTerminal(
+  result: ScopeglassCheckResultV1,
+  options: TerminalRenderOptions,
+): string {
+  const reportOutput = renderTerminal(result.report, options);
+  const failures =
+    result.policy.failures.length === 0
+      ? "none"
+      : result.policy.failures.join(", ");
+  const budget =
+    result.policy.maxTokens === undefined
+      ? "disabled"
+      : result.policy.maxTokens.toLocaleString("en-US");
+  const policyOutput = [
+    "Policy",
+    `│ Result: ${result.policy.passed ? "PASSED" : "FAILED"}`,
+    `│ Diagnostic threshold: ${result.policy.failOn}`,
+    `│ Token budget: ${budget}`,
+    `│ Failures: ${failures}`,
+    "",
+  ].join("\n");
+
+  return assertOutputSize(`${reportOutput}${policyOutput}`);
 }

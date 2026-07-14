@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
+import { runCli } from "./cli/program.js";
+import { readPackageVersion, writeUnexpectedError } from "./cli/runtime.js";
 
-const program = new Command()
-  .name("scopeglass")
-  .description("Inspect which AGENTS.md instructions apply to a path and why.")
-  .version("0.1.0");
-
-await program.parseAsync();
+try {
+  const version = await readPackageVersion(
+    new URL("../package.json", import.meta.url),
+  );
+  process.exitCode = await runCli(process.argv.slice(2), version);
+} catch {
+  writeUnexpectedError();
+  process.exitCode = 2;
+}
