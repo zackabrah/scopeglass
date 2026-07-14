@@ -44,6 +44,14 @@ describe("public contract", () => {
     expect(error.path).toBe("src/missing.ts");
   });
 
+  it("never exposes absolute paths or invisible controls in typed errors", () => {
+    const error = new ScopeglassError("unreadable-file", "Unreadable.", {
+      path: "/Users/alice/private\u001b\u202e.md",
+    });
+
+    expect(error.path).toBe("private\\u{1b}\\u{202e}.md");
+  });
+
   it("keeps analyze's supported signature small", () => {
     expectTypeOf(analyze).toEqualTypeOf<
       (target?: string, options?: AnalyzeOptions) => Promise<ScopeglassReportV1>

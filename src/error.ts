@@ -1,4 +1,5 @@
 import type { ScopeglassErrorCode } from "./types.js";
+import { safeDisplayPath } from "./sanitize.js";
 
 export interface ScopeglassErrorOptions {
   path?: string;
@@ -21,7 +22,7 @@ export class ScopeglassError extends Error {
     this.name = "ScopeglassError";
     this.code = code;
     if (options.path !== undefined) {
-      this.path = options.path;
+      this.path = safeDisplayPath(options.path);
     }
   }
 }
