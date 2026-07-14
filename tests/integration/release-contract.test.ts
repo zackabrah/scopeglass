@@ -192,6 +192,9 @@ describe("release contract", () => {
     const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8")) as {
       scripts: Record<string, string>;
     };
+    const protectedMain = workflow.indexOf(
+      "- name: Verify tag belongs to protected main",
+    );
     const verify = workflow.indexOf("- name: Build and verify package once");
     const clean = workflow.indexOf("- name: Verify checkout stayed clean");
     const preserve = workflow.indexOf(
@@ -201,7 +204,15 @@ describe("release contract", () => {
       "- name: Stage the verified tarball with provenance",
     );
 
-    expect(verify).toBeGreaterThanOrEqual(0);
+    expect(workflow).toContain("fetch-depth: 0");
+    expect(protectedMain).toBeGreaterThanOrEqual(0);
+    expect(verify).toBeGreaterThan(protectedMain);
+    expect(workflow.slice(protectedMain, verify)).toContain(
+      "git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main",
+    );
+    expect(workflow.slice(protectedMain, verify)).toContain(
+      "git merge-base --is-ancestor HEAD refs/remotes/origin/main",
+    );
     expect(clean).toBeGreaterThan(verify);
     expect(preserve).toBeGreaterThan(clean);
     expect(stage).toBeGreaterThan(preserve);

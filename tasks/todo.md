@@ -55,7 +55,7 @@ successful command without intervening changes.
 
 Local verification on 2026-07-14:
 
-- `npm test` — 98 tests across 14 files passed, including exact byte/syntax
+- `npm test` — 99 tests across 14 files passed, including exact byte/syntax
   limits, parser amplification, Unicode normalization retention, filesystem
   aliases, reference-I/O bounds, output contracts, and release metadata.
 - `npm run typecheck`, `npm run lint`, and `actionlint` — passed on the settled
