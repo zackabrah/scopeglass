@@ -9,6 +9,14 @@
     "developer-tools",
     "static-analysis"
   ],
+  "homepage": "https://github.com/zackabrah/scopeglass#readme",
+  "bugs": {
+    "url": "https://github.com/zackabrah/scopeglass/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zackabrah/scopeglass.git"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -18,6 +26,10 @@
     "node": ">=22.13.0"
   },
   "packageManager": "npm@10.9.8",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "bin": {
     "scopeglass": "./dist/cli.js"
   },
@@ -47,10 +59,14 @@
     "format": "prettier --write . --ignore-path .gitignore",
     "format:check": "prettier --check . --ignore-path .gitignore",
     "typecheck": "tsc --noEmit",
-    "package:check": "publint && attw --pack .",
+    "schema:check": "node scripts/validate-schema.mjs",
+    "package:pack": "node scripts/pack-package.mjs",
+    "package:check": "npm run package:pack && node scripts/verify-package.mjs",
+    "release:check": "node scripts/check-release-tag.mjs",
+    "release:publish": "node scripts/publish-package.mjs",
     "audit": "npm audit --audit-level=high",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run package:check",
-    "prepack": "npm run build"
+    "audit:signatures": "npm audit signatures",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run schema:check && npm run package:check"
   },
   "dependencies": {
     "commander": "15.0.0",
@@ -62,6 +78,7 @@
     "@types/mdast": "4.0.4",
     "@types/node": "22.20.1",
     "@vitest/coverage-v8": "4.1.10",
+    "ajv": "8.20.0",
     "eslint": "10.7.0",
     "prettier": "3.9.5",
     "publint": "0.3.21",

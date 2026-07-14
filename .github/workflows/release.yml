@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  publish:
+    name: Verify and publish exact package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
+      - name: Pin build npm
+        run: npm install --global npm@10.9.8 --ignore-scripts
+
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Validate release tag
+        run: npm run release:check
+
+      - name: Build and verify package once
+        run: npm run verify
+
+      - name: Verify registry signatures
+        run: npm run audit:signatures
+
+      - name: Audit high-severity vulnerabilities
+        run: npm run audit
+
+      - name: Install OIDC-capable npm
+        run: npm install --global npm@11.18.0 --ignore-scripts
+
+      - name: Publish the verified tarball with provenance
+        run: npm run release:publish
