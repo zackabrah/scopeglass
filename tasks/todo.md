@@ -9,15 +9,15 @@
     symlink/junction, aggregate-size, and host-path disclosure protections
   - Verify: path and filesystem integration tests
 - [x] Checkpoint: foundation green and independently reviewed
-- [ ] Task 3: Markdown instruction/reference extraction
+- [x] Task 3: Markdown instruction/reference extraction
   - Acceptance: non-duplicated structured records, exact provenance, inert-link
     rules, and parser/instruction/reference bounds
   - Verify: parser unit and fixture tests
-- [ ] Task 4: Token accounting and deterministic diagnostics
+- [x] Task 4: Token accounting and deterministic diagnostics
   - Acceptance: byte-based estimate plus bounded linear duplicate/conflict and
     reference diagnostics with accurate summaries
   - Verify: focused red/green analysis tests
-- [ ] Checkpoint: analysis report matches golden assertions
+- [x] Checkpoint: analysis report matches golden assertions
 - [ ] Task 5: Terminal and JSON renderers
   - Acceptance: workflow-command-safe terminal escaping and deterministic
     schema-v1 JSON with no host-path or ANSI leakage
@@ -55,3 +55,8 @@ successful command without intervening changes.
   exact byte bounds, aggregate/scope limits, hostile markers, symlinks, BOM, and
   no host-path leakage.
 - Scoped ESLint and strict TypeScript checks for discovery — passed.
+- `npm test -- tests/unit/markdown.test.ts tests/unit/diagnostics.test.ts
+  tests/integration/analyze.test.ts` — 11 tests passed, including provenance,
+  parser limits, false-positive guards, deterministic ordering, hostile local
+  references, exact context totals, and repeat-run equality.
+- Full `npm run typecheck` and `npm run lint` after core analysis — passed.
