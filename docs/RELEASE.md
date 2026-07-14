@@ -1,9 +1,10 @@
 # Scopeglass release process
 
-This is a prospective release checklist for maintainers. It does not establish
-that Scopeglass 0.1.0 is published, that continuous integration is configured,
-or that any browser, operating-system, provenance, or registry gate has passed.
-Record evidence for every gate during an actual release.
+This checklist governs an actual release. Scopeglass 0.1.0 is a locally verified
+source candidate, but it remains unpublished and marked `Unreleased`. The
+repository contains CI and OIDC release workflows; hosted matrix, provenance,
+and registry evidence exist only after those workflows run from the configured
+GitHub repository. Record evidence for every gate during an actual release.
 
 ## Release principles
 
@@ -39,7 +40,8 @@ record.
 2. Review every change since the previous release, including dependencies,
    package metadata, schema, ruleset behavior, limits, and security controls.
 3. Ensure `package.json` and the CLI report the intended package version.
-4. Change `schemaVersion` only for an incompatible report-contract change.
+4. Change `schemaVersion` and the package major version for any report-shape
+   change, including an added field; the published schema is strict.
 5. Change `rulesetVersion` when extraction or diagnostic meaning changes while
    the report shape stays compatible.
 6. Move the intended entries in [CHANGELOG.md](../CHANGELOG.md) from
@@ -61,6 +63,7 @@ where it differs.
 npm ci
 npm run verify
 npm run audit
+npm run audit:signatures
 ```
 
 `npm run verify` is expected to cover formatting, linting, type checking,
@@ -82,36 +85,39 @@ For each environment, retain:
 
 ## 3. Inspect and smoke-test the package
 
-First inspect without creating a tarball:
+The `npm run verify` command in section 2 ends by creating and validating the
+candidate exactly once. Do not run `package:check` or `npm pack` again. Inspect
+that existing candidate:
 
 ```sh
-npm pack --dry-run
+cat .artifacts/manifest.json
+tar -tzf .artifacts/scopeglass-*.tgz
 ```
 
-Confirm the file list contains only the intended runtime and public artifacts,
-including:
+The `package:check` stage within `verify` removes stale candidates, packs once,
+records the filename, size, and SHA-256 digest, then runs publint, Are The Types
+Wrong, a clean scripts-disabled install, the installed CLI and ESM API, schema
+validation, and a final unchanged-artifact hash check. Confirm the file list
+contains only the intended runtime and public artifacts, including:
 
 - built JavaScript and declarations under `dist/`;
-- `schemas/scopeglass-report-v1.schema.json`;
-- `README.md`, `CHANGELOG.md`, `LICENSE`, and `SECURITY.md`;
+- `schemas/scopeglass-report-v1.schema.json` and
+  `schemas/scopeglass-check-result-v1.schema.json`;
+- `AGENTS.md`, `README.md`, `SPEC.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`,
+  `CONTRIBUTING.md`, `LICENSE`, and `SECURITY.md`;
+- the public documentation under `docs/` and `tasks/plan.md`;
 - package metadata and the CLI entry point.
 
 Confirm it excludes source fixtures, private notes, coverage, temporary
 reports, credentials, editor state, and unrelated repository files.
 
-Create the candidate only after the dry run is correct:
-
-```sh
-npm pack
-shasum -a 256 scopeglass-*.tgz
-```
-
-Install that exact tarball in a new temporary directory. Exercise the binary
-and package API against small, nested, malformed, hostile-string, and
-limit-boundary fixtures. At minimum verify:
+Do not run `npm pack` again after this gate. The manifest identifies the only
+candidate the release workflow may publish. The unit and integration suites,
+followed by the packed-install verifier, must collectively exercise:
 
 - package-root named imports;
-- `scopeglass/schema/report-v1.json` resolution;
+- `scopeglass/schema/report-v1.json` and
+  `scopeglass/schema/check-result-v1.json` resolution;
 - `inspect` terminal and JSON modes;
 - `check` pass, diagnostic-threshold failure, token-threshold failure, and
   usage/fatal exit codes;
@@ -120,17 +126,27 @@ limit-boundary fixtures. At minimum verify:
 - no ANSI or status text contaminates JSON or HTML stdout;
 - two identical JSON runs compare byte-for-byte equal.
 
-Do not rebuild between testing the tarball and publishing it.
+Do not rebuild or repack between testing the tarball and publishing it.
 
 ## 4. Review hostile output and browsers
 
-Render a report fixture containing HTML delimiters, quotes, Unicode,
-bidirectional controls, ANSI controls, long unbroken text, Markdown links, and
-paths resembling URLs. Confirm that repository data remains text in every
-format.
+Install the isolated engines once, then run the repository-owned browser gate:
 
-Manually inspect the static HTML candidate in supported browsers at viewport
-widths 320, 768, 1024, and 1440 pixels. Record:
+```sh
+npm run browser:install
+npm run browser:check
+```
+
+The suite renders a hostile report fixture containing HTML delimiters, quotes,
+Unicode, bidirectional controls, ANSI controls, long unbroken text, Markdown
+links, and paths resembling URLs. It checks Chromium, Firefox, and WebKit at
+320, 768, 1024, and 1440 pixels, plus 200% text size. It also enforces zero
+scripts, non-local requests, console errors, or axe accessibility violations;
+native keyboard disclosures; the exact meta CSP; and tagged Chromium PDF
+output. Evidence and screenshots are written under `.browser-artifacts/`,
+separate from the package candidate directory.
+
+Manually inspect the generated screenshots and Chromium print preview. Record:
 
 - no script execution, remote request, or active repository-controlled link;
 - no browser-console errors or Content Security Policy violations;
@@ -140,8 +156,13 @@ widths 320, 768, 1024, and 1440 pixels. Record:
 - sensible print preview;
 - correct rendering with an empty report and maximum representative content.
 
-Browser review and automated cross-browser testing are release gates; this
-checklist does not claim they have been completed for 0.1.0.
+Browser review and automated cross-browser testing are release gates. Local
+success is not a substitute for a green hosted release-workflow run on the
+tagged commit. CI and release workflows preserve `.browser-artifacts/` as a
+short-lived workflow artifact once the browser-QA process initializes, including
+partial evidence when an engine or assertion fails. Browser installation or
+build failures can precede artifact creation and remain in the workflow logs.
+Retain the artifact URL, when present, with the release evidence.
 
 ## 5. Establish publication controls
 
@@ -164,6 +185,47 @@ The workflow should:
 Review npm ownership, two-factor authentication, recovery access, package name,
 visibility, and provenance support immediately before the first publish. Never
 paste a registry token into a command, issue, log, or repository file.
+
+### First-publication bootstrap
+
+npm requires a package to exist before a trusted publisher can be configured.
+The first publication therefore needs a one-time, explicitly approved manual
+bootstrap; it is not performed by the tag workflow in this repository.
+
+1. Create the public GitHub repository at the exact URL declared in
+   `package.json`, protect the `npm` environment, and confirm that the package
+   name remains available.
+2. On a separate, reviewed bootstrap commit, set the package version to
+   `0.0.0-bootstrap.0`. Run every verification gate above, inspect its exact
+   `.artifacts/*.tgz`, and obtain second-maintainer review plus explicit
+   bootstrap approval. Do not tag this commit as a release.
+3. Publish only that exact prerelease candidate under a non-default dist-tag:
+
+   ```sh
+   npm publish .artifacts/scopeglass-0.0.0-bootstrap.0.tgz --access public --tag bootstrap --provenance=false --ignore-scripts
+   ```
+
+   Complete the registry's 2FA challenge. `--provenance=false` is an explicit,
+   recorded bootstrap-only exception because a local interactive process cannot
+   issue GitHub OIDC provenance. The `bootstrap` tag prevents this placeholder
+   from becoming `latest`. If a token is unavoidable, use a short-lived,
+   package-scoped granular token and revoke it immediately; never store a
+   long-lived automation token.
+
+4. Verify the registry tarball, integrity, metadata, executable, and installed
+   API before changing any publishing controls.
+5. Configure npm trusted publishing for repository `zackabrah/scopeglass`,
+   workflow `release.yml`, environment `npm`, and publish permission. Confirm
+   `package.json` still names the same repository.
+6. Revoke the bootstrap token if one was used, restrict traditional token
+   publishing, and require the real `v0.1.0` and all later releases to use the
+   OIDC tag workflow. Return to the intended release commit and repeat every
+   changed/downstream gate before creating the release tag. After `v0.1.0` is
+   verified, remove the temporary `bootstrap` dist-tag and deprecate the
+   placeholder version with a clear message.
+
+If any identity, checksum, approval, or verification step differs from the
+reviewed record, stop and produce a new candidate instead of improvising.
 
 ## 6. Approve and publish
 

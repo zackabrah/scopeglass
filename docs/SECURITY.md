@@ -39,26 +39,29 @@ user, but they are still validated at filesystem and output boundaries.
 
 ## Threats and controls
 
-| Threat                                            | Primary controls                                                                                                                  |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Path traversal outside the root                   | Canonical root/target resolution, `path.relative` containment checks, root-relative display paths                                 |
-| Symlink or file-swap attacks on instruction reads | `lstat`, regular-file checks, `O_NOFOLLOW` where available, descriptor `fstat`, device/inode comparison, path revalidation        |
-| Oversized or pathological input                   | Per-file and aggregate byte limits, scope/instruction/reference/depth/diagnostic limits, bounded chunk reads                      |
-| Malformed text                                    | Fatal UTF-8 decoding and a structured error; optional UTF-8 BOM removal for instruction files                                     |
-| Malicious Markdown references                     | Relative-local classification, lexical and resolved containment checks, existence checks only; referenced content is never opened |
-| Terminal escape injection                         | Control-character escaping and styling kept outside repository-controlled strings                                                 |
-| JSON control or ANSI injection                    | Standard JSON serialization of the canonical value; no color or terminal control codes                                            |
-| HTML/script injection                             | Contextual escaping, no scripts, no remote assets, inert repository references, restrictive embedded CSP                          |
-| Existing-file overwrite                           | Exclusive `wx` creation, private `0600` mode, output-parent identity validation, cleanup limited to the newly created inode       |
-| Nondeterministic or host-leaking output           | Canonical ordering; no timestamps, durations, absolute host paths, environment values, or randomness in successful reports        |
-| Accidental disclosure                             | No telemetry, model call, remote fetch, upload, auto-open, or automatic sharing                                                   |
+| Threat                                            | Primary controls                                                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Path traversal outside the root                   | Canonical root/target resolution, `path.relative` containment checks, root-relative display paths                               |
+| Symlink or file-swap attacks on instruction reads | `lstat`, regular-file checks, `O_NOFOLLOW` where available, descriptor `fstat`, device/inode comparison, path revalidation      |
+| Oversized or pathological input                   | Per-file and aggregate byte limits, scope/instruction/reference/depth/diagnostic limits, bounded chunk reads                    |
+| Malformed text                                    | Fatal UTF-8 decoding and a structured error; optional UTF-8 BOM removal for instruction files                                   |
+| Malicious Markdown references                     | Relative-local classification, lexical containment, component-wise `lstat`, final resolved containment; content is never opened |
+| Terminal escape injection                         | Control-character escaping and styling kept outside repository-controlled strings                                               |
+| JSON control or ANSI injection                    | Standard JSON serialization of the canonical value; no color or terminal control codes                                          |
+| HTML/script injection                             | Contextual escaping, no scripts, no remote assets, inert repository references, restrictive embedded CSP                        |
+| Existing-file overwrite                           | Exclusive `wx` creation, private `0600` mode, output-parent identity validation, cleanup limited to the newly created inode     |
+| Nondeterministic or host-leaking output           | Canonical ordering; no timestamps, durations, absolute host paths, environment values, or randomness in successful reports      |
+| Accidental disclosure                             | No telemetry, model call, remote fetch, upload, auto-open, or automatic sharing                                                 |
 
 ## Repository discovery
 
 Root discovery recognizes either a `.git` directory or a small `.git` marker
 file. Marker files are capped at 4 KiB and must pass the same file-identity and
 encoding checks used at the read boundary. Scopeglass does not execute Git,
-interpret repository hooks, source configuration, or contact a remote.
+interpret repository hooks, source configuration, or contact a remote. A
+syntactically valid `gitdir` target is treated as opaque text and is never
+resolved, stat'd, or otherwise dereferenced—including absolute and network-like
+targets.
 
 The selected target must remain under the selected root. Successful reports use
 `.` as the root and normalized root-relative paths elsewhere, avoiding leakage
@@ -95,6 +98,10 @@ exists under the selected root. Scopeglass does not:
 
 An escaping, absolute, device, or otherwise unsafe reference becomes a
 diagnostic. Missing safe references become a broken-reference diagnostic.
+For a lexically contained target, Scopeglass `lstat`s each directory component
+and stops at a symbolic link or junction before inspecting anything behind it.
+Repeated identical targets from one source directory share a bounded validation
+result; linked content is never read.
 
 ## Rendering
 
@@ -112,7 +119,10 @@ non-color-capable environments produce plain text.
 JSON mode serializes the canonical report and emits no progress text or ANSI
 codes to standard output. Consumers should still treat every string as
 untrusted data and validate against the published
-[JSON Schema](../schemas/scopeglass-report-v1.schema.json).
+[report JSON Schema](../schemas/scopeglass-report-v1.schema.json) or
+[check-result JSON Schema](../schemas/scopeglass-check-result-v1.schema.json),
+as appropriate. The check-result schema references the report schema, so load
+both when validating check output.
 
 ### HTML
 
@@ -128,7 +138,10 @@ File reports use exclusive creation and refuse an existing path. The output
 file is set to mode `0600`, written as UTF-8, synchronized, and closed. Parent
 directory components under the invocation working directory are required to be
 real directories, not symbolic links, and parent identity is rechecked around
-creation.
+creation. Descendant detection walks candidate ancestors by filesystem
+device/inode identity, rather than attempting to reproduce platform-specific
+case or Unicode normalization rules, so equivalent path spellings cannot skip
+the component checks.
 
 On a failed write, cleanup removes only the regular file whose device and inode
 match the file Scopeglass created. The tool does not replace an existing file
@@ -152,10 +165,17 @@ or sending them to another person.
 ## Resource limits
 
 Version 0.1.0 limits the number and size of scopes, files, extracted
-instructions, references, Markdown nesting, diagnostics, and rendered output.
-The exact values are listed in the [README](../README.md) and defined in
+instructions, references, unique reference-path inspections, parser-sensitive
+Markdown syntax, Markdown nesting, diagnostics, and rendered output. The exact
+values are listed in the [README](../README.md) and defined in
 `src/constants.ts`. Exceeding a hard limit is a structured fatal failure rather
 than a partial success.
+
+Duplicate/conflict diagnostics additionally skip instructions over 1,024 code
+points and normalized forms over 8,192 code points, with a 4,194,304-code-point
+aggregate normalization budget. Those nonfatal heuristic caps preserve the
+instruction in the report while preventing Unicode compatibility expansion
+from consuming disproportionate memory.
 
 The token count is an estimate—`ceil(UTF-8 bytes / 3)`—not a tokenizer result or
 a security boundary.
@@ -180,12 +200,12 @@ a security boundary.
 
 ## Verification status
 
-The repository contains automated tests for parsing, discovery, path safety,
-limits, diagnostics, rendering, and CLI behavior. Passing the final supported
-operating-system matrix, browser review, dependency audit, packaging smoke
-test, and release workflow are release gates described in
-[RELEASE.md](RELEASE.md); this document does not claim those gates have already
-completed.
+The source candidate has local automated evidence for parsing, discovery, path
+safety, limits, diagnostics, rendering, CLI behavior, cross-browser review,
+dependency audits, and exact-tarball packaging. Hosted operating-system/Node
+matrix results, protected-environment approval, provenance, and registry
+publication remain external release gates described in
+[RELEASE.md](RELEASE.md).
 
 The architectural rationale for keeping the pipeline local and deterministic
 is recorded in

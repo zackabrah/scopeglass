@@ -71,9 +71,9 @@ test files, fixture files.
 
 ### Checkpoint: Foundation
 
-- [ ] Focused tests pass.
-- [ ] Build and typecheck pass.
-- [ ] Public contract and path security receive independent review.
+- [x] Focused tests pass.
+- [x] Build and typecheck pass.
+- [x] Public contract and path security receive independent review.
 
 ## Phase 2: Analysis
 
@@ -111,9 +111,9 @@ test files, fixture files.
 
 ### Checkpoint: Core analysis
 
-- [ ] Analysis fixture produces the expected versioned report.
-- [ ] Unit/integration coverage meets the configured floor for completed modules.
-- [ ] No repository content is executed or fetched.
+- [x] Analysis fixture produces the expected versioned report.
+- [x] Unit/integration coverage meets the configured floor for completed modules.
+- [x] No repository content is executed or fetched.
 
 ## Phase 3: Output and CLI
 
@@ -168,9 +168,9 @@ package metadata.
 
 ### Checkpoint: End-to-end
 
-- [ ] All three output formats agree.
-- [ ] CLI policy behavior passes integration tests.
-- [ ] Generated report passes browser console, accessibility, keyboard, and
+- [x] All three output formats agree.
+- [x] CLI policy behavior passes integration tests.
+- [x] Generated report passes browser console, accessibility, keyboard, and
       responsive checks.
 
 ## Phase 4: Production hardening
@@ -217,7 +217,7 @@ package metadata.
 | Symlink/path escape reads outside root    | High   | Realpath containment before every read, integration abuse tests.                           |
 | Parser drops source provenance            | Medium | AST positions are contract-tested on nested constructs.                                    |
 | Token figure is interpreted as universal  | Medium | Name the heuristic everywhere, show exact bytes, and call tokens an estimate.              |
-| CLI surface becomes difficult to evolve   | Medium | Version JSON, stable codes, additive changes, integration tests.                           |
+| CLI surface becomes difficult to evolve   | Medium | Version JSON, stable codes, explicit major-version changes, integration tests.             |
 | Dependency compromise                     | Medium | Three pinned runtime dependencies, lockfile, immutable CI actions, audit, OIDC provenance. |
 
 ## Open questions

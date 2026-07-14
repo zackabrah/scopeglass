@@ -17,7 +17,8 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
 - `inspect`, `report`, and policy-oriented `check` command contracts.
 - A small ESM programmatic API centered on `analyze()` and typed
   `ScopeglassError` failures.
-- Strict JSON Schema 2020-12 for report schema version 1.
+- Strict JSON Schema 2020-12 contracts for report and check-result schema
+  version 1.
 - Bounded local processing, hostile-input controls, and exclusive private HTML
   report creation.
 
@@ -26,8 +27,12 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
 - Repository content is never executed, fetched, imported, or sent off-device.
 - Output paths and repository text are treated as untrusted across terminal,
   JSON, and HTML boundaries.
+- Parser-sensitive syntax is bounded before Markdown parsing; Unicode
+  diagnostic normalization has per-instruction and aggregate budgets.
+- Local-reference checks cache shared path components while preserving
+  component-wise symlink and final realpath containment validation.
 
-The npm publication, release automation, and final browser/release-candidate
-verification for 0.1.0 have not been declared complete. Replace `Unreleased`
-with the release date only after every gate in
-[`docs/RELEASE.md`](docs/RELEASE.md) passes.
+The local browser, package, and audit gates pass. Final hosted
+release-candidate evidence, npm publication, and trusted-publisher
+configuration are not declared complete. Replace `Unreleased` with the release
+date only after every gate in [`docs/RELEASE.md`](docs/RELEASE.md) passes.

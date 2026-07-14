@@ -20,10 +20,12 @@ line. Security fixes normally target the latest supported minor version.
 
 ## Report a vulnerability
 
-Use the repository hosting platform's private **Report a vulnerability** flow
-when it is available. If it is not available, contact the repository owner or a
-maintainer through a private channel before sharing technical details. Do not
-open a public issue for an undisclosed vulnerability.
+Use GitHub's private
+[**Report a vulnerability**](https://github.com/zackabrah/scopeglass/security/advisories/new)
+flow. Enabling and testing private vulnerability reporting is a mandatory
+public-release gate. If that link is unavailable, do not open a public issue or
+send sensitive details; the release owner must restore the private flow or add
+a monitored private contact here before publishing Scopeglass.
 
 Include:
 

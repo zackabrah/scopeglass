@@ -18,20 +18,20 @@
     reference diagnostics with accurate summaries
   - Verify: focused red/green analysis tests
 - [x] Checkpoint: analysis report matches golden assertions
-- [ ] Task 5: Terminal and JSON renderers
+- [x] Task 5: Terminal and JSON renderers
   - Acceptance: workflow-command-safe terminal escaping and deterministic
     schema-v1 JSON with no host-path or ANSI leakage
   - Verify: formatter tests in color/no-color modes
-- [ ] Task 6: Accessible self-contained HTML report
+- [x] Task 6: Accessible self-contained HTML report
   - Acceptance: exact CSP, zero JavaScript/network, inert hostile data,
     responsive print-safe and keyboard-usable UI
   - Verify: unit tests and isolated real-browser QA
-- [ ] Task 7: CLI commands, streams, and exit policies
+- [x] Task 7: CLI commands, streams, and exit policies
   - Acceptance: exact command matrix, exclusive private report writes, combined
     policy truth table, and deterministic 0/1/2 exits
   - Verify: CLI integration and packed-install smoke tests
-- [ ] Checkpoint: end-to-end CLI and report green
-- [ ] Task 8: Governance, documentation, CI, and release workflow
+- [x] Checkpoint: end-to-end CLI and report green
+- [x] Task 8: Governance, documentation, CI, and release workflow
   - Acceptance: production repository, immutable least-privilege CI, and OIDC
     provenance release of the exact verified tarball
   - Verify: docs links, workflow inspection, package checks, audit
@@ -39,24 +39,31 @@
   - Acceptance: all required findings resolved; hostile corpus and golden fixture
     pass across supported platforms
   - Verify: full verification, audit, browser QA, clean git status
+  - [x] Local correctness, contract, release, accessibility, and reliability
+        reviews have no remaining P1/P2 findings
+  - [x] Local hostile corpus, golden fixture, packaging, audits, and isolated
+        Chromium/Firefox/WebKit gates pass
+  - [ ] Hosted Linux/macOS/Windows matrix, protected release environment,
+        provenance, and registry evidence require the public repository
 
 ## Verification record
 
 Record each meaningful command once after the relevant change. Do not repeat a
 successful command without intervening changes.
 
-- `npm test -- tests/unit/public-contract.test.ts tests/unit/schema-contract.test.ts`
-  — 4 tests passed.
-- `npm run build` — ESM JavaScript, declarations, source maps, and CLI shebang
-  built successfully.
-- `npm audit --audit-level=low` — 0 vulnerabilities after the reviewed esbuild
-  override; production dependency audit also clean.
-- `npm test -- tests/integration/discovery.test.ts` — 14 tests passed, including
-  exact byte bounds, aggregate/scope limits, hostile markers, symlinks, BOM, and
-  no host-path leakage.
-- Scoped ESLint and strict TypeScript checks for discovery — passed.
-- `npm test -- tests/unit/markdown.test.ts tests/unit/diagnostics.test.ts
-  tests/integration/analyze.test.ts` — 11 tests passed, including provenance,
-  parser limits, false-positive guards, deterministic ordering, hostile local
-  references, exact context totals, and repeat-run equality.
-- Full `npm run typecheck` and `npm run lint` after core analysis — passed.
+Local verification on 2026-07-14:
+
+- `npm test` — 93 tests across 13 files passed, including exact byte/syntax
+  limits, parser amplification, Unicode normalization retention, filesystem
+  aliases, reference-I/O bounds, output contracts, and release metadata.
+- `npm run typecheck`, `npm run lint`, and `actionlint` — passed on the settled
+  local source tree.
+- `npm run browser:check` — the exact 4,194,304-byte fixture passed Chromium
+  149.0.7827.55, Firefox 151.0, and WebKit 26.5, including canonical fact
+  agreement, axe, keyboard, reflow, fresh closed-scope print visibility, and a
+  tagged script-free PDF.
+- `npm audit --audit-level=low` and the production-only audit — 0
+  vulnerabilities; registry verification reported 276 signatures and 71
+  attestations.
+- Independent contract and reliability rechecks reported no remaining P1/P2
+  findings after the final regression fixes.

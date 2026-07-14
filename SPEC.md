@@ -61,6 +61,9 @@ Global behavior:
 - Serialized paths use `/` separators and are relative to the resolved root.
   The serialized root is always `.`; absolute local paths never appear in JSON
   or HTML.
+- The schema interprets `/` as the serialized separator. It rejects slash-rooted
+  paths, `.`/`..` segments, and NULs, but permits `:` or `\` inside a POSIX
+  filename component; native Windows roots are removed before serialization.
 - Human-facing errors go to stderr; successful payloads go to stdout.
 - `NO_COLOR` and non-TTY output are respected.
 - Fatal usage/filesystem failures are `ScopeglassError` instances at the
@@ -122,18 +125,19 @@ Stable error codes are: `invalid-option`, `invalid-root`, `target-not-found`,
 `target-outside-root`, `unsafe-symlink`, `file-too-large`, `total-too-large`,
 `invalid-encoding`, `invalid-git-marker`, `scope-limit-exceeded`,
 `instruction-limit-exceeded`, `instruction-too-long`,
-`reference-limit-exceeded`, `markdown-depth-exceeded`,
-`diagnostic-limit-exceeded`, `output-too-large`, `unreadable-file`, and
-`write-failed`.
+`section-too-long`, `reference-limit-exceeded`, `reference-too-long`,
+`reference-complexity-exceeded`, `markdown-complexity-exceeded`,
+`markdown-depth-exceeded`, `diagnostic-limit-exceeded`,
+`output-too-large`, `unreadable-file`, and `write-failed`.
 
 ### JSON contract
 
 All JSON output is deterministic and carries `schemaVersion: 1` and
-`rulesetVersion: 1`. There is no generation timestamp. A JSON Schema ships in
-the package. Additive report fields may be introduced in minor versions;
-removing or changing an existing field requires a major release. A diagnostic
-ruleset change that can alter `check` results increments `rulesetVersion` and is
-treated as a breaking policy change.
+`rulesetVersion: 1`. There is no generation timestamp. Strict report and
+check-result JSON Schemas ship in the package. The v1 shapes are exact: adding,
+removing, or changing a field requires a new schema version and a major release.
+A diagnostic ruleset change that can alter `check` results increments
+`rulesetVersion` and is treated as a breaking policy change.
 
 ```ts
 interface SourceLocation {
@@ -148,10 +152,15 @@ interface TokenEstimate {
   total: number; // ceil(bytes / 3)
 }
 
-interface RootDiscovery {
-  method: "explicit" | "git-directory" | "git-file" | "target-fallback";
-  marker?: ".git";
-}
+type RootDiscovery =
+  | {
+      method: "explicit" | "target-fallback";
+      marker?: never;
+    }
+  | {
+      method: "git-directory" | "git-file";
+      marker: ".git";
+    };
 
 interface ScopeRecord {
   id: string;
@@ -321,11 +330,13 @@ export type Diagnostic =
 2. If `root` is supplied, it must exist as a real, non-symlink directory. If it
    is omitted, walk upward from the target's lexical directory. A valid marker
    is either a real `.git` directory or a regular `.git` file of at most 4 KiB
-   containing exactly one `gitdir: <path>` directive whose resolved target is a
-   directory. This supports worktrees and nested repositories without invoking
-   Git or loading repository configuration. An encountered malformed marker is
-   fatal `invalid-git-marker`; it is not silently skipped. If no marker exists,
-   use the target's lexical directory as root and record `target-fallback`.
+   containing exactly one `gitdir: <path>` directive. The directive target is
+   opaque marker text: Scopeglass never resolves, stats, or reads it. This
+   recognizes worktree and nested-repository boundaries without invoking Git,
+   loading repository configuration, or probing an external/network path. An
+   encountered malformed marker is fatal `invalid-git-marker`; it is not
+   silently skipped. If no marker exists, use the target's lexical directory
+   as root and record `target-fallback`.
 3. Realpath the non-symlink root and target and reject containment when
    `path.relative(root, target)` is absolute or begins with a `..` segment. Never
    use string-prefix containment. Windows comparisons use `path.relative()` on
@@ -356,7 +367,12 @@ symlink swaps.
 | Combined AGENTS.md bytes          | 4,194,304 bytes             | Fatal `total-too-large`.                                           |
 | Extracted instructions            | 4,096                       | Fatal `instruction-limit-exceeded`.                                |
 | One extracted instruction         | 131,072 Unicode code points | Fatal `instruction-too-long`.                                      |
+| One section heading               | 256 Unicode code points     | Fatal `section-too-long`.                                          |
 | Local references                  | 2,048                       | Fatal `reference-limit-exceeded`.                                  |
+| One local-reference target        | 4,096 Unicode code points   | Fatal `reference-too-long`.                                        |
+| Unique reference-path inspections | 16,384                      | Fatal `reference-complexity-exceeded`.                             |
+| Parser-sensitive syntax/file      | 16,384 characters           | Fatal `markdown-complexity-exceeded` before Markdown parsing.      |
+| Parser-sensitive syntax/chain     | 32,768 characters           | Fatal `markdown-complexity-exceeded` before Markdown parsing.      |
 | Markdown AST depth                | 128                         | Fatal `markdown-depth-exceeded`.                                   |
 | Diagnostics                       | 4,096                       | Fatal `diagnostic-limit-exceeded`.                                 |
 | Rendered terminal/JSON/HTML bytes | 33,554,432                  | Fatal `output-too-large`.                                          |
@@ -366,6 +382,8 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
 ### Instruction extraction and precedence
 
 - Headings maintain a section stack but are not instructions.
+- When a normalized reference label has multiple definitions, the first
+  definition wins, matching CommonMark.
 - A root-level paragraph is one `paragraph` instruction.
 - Each direct paragraph inside a list item is one `list-item` instruction;
   nested lists recurse, and parent text is never duplicated into child records.
@@ -378,7 +396,10 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   values but do not delete or suppress ancestor records.
 - Exact duplicate normalization uses Unicode NFKC, lowercase, Markdown text
   extraction, punctuation-to-space, and collapsed whitespace. Duplicate groups
-  are informational and retain every source.
+  are informational and retain every source. Only instructions of at most 1,024
+  Unicode code points enter this heuristic, and NFKC/lowercase forms over 8,192
+  code points are skipped. At most 4,194,304 normalized code points enter the
+  per-report indexes. Skipped instructions remain in the report.
 - Possible conflicts are intentionally narrow and informational: only rules
   with opposite leading polarity and an otherwise _exact_ normalized core are
   paired. Recognized negative prefixes are `do not`, `don't`, `never`,
@@ -386,6 +407,11 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   action prefixes (`always`, `must`, `should`, `use`, `prefer`, `require`,
   `allow`) are removed before exact comparison. Scoped exceptions whose cores
   differ are not flagged. The algorithm is hash-based and linear.
+- Before calling the Markdown parser, Scopeglass counts tabs, line endings, and
+  the construct markers `` ! & ) * + - . < > [ \\ ] _ ` ``. CRLF counts as
+  one line ending. Per-file and aggregate budgets prevent parser event
+  expansion from turning a byte-valid file into disproportionate memory or CPU
+  work.
 
 ### References
 
@@ -401,6 +427,15 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   tricks on POSIX, lexical escapes, missing targets, broken symlinks, junctions,
   special files, and resolved paths outside root produce deterministic
   `broken-reference` or `unsafe-reference` diagnostics.
+- After lexical containment, inspect every path component with `lstat` and stop
+  at the first symbolic link or junction. Do not probe the final target through
+  such a component. A per-analysis cache shares component metadata and final
+  realpath results across targets with common prefixes. Repeated occurrences of
+  the same raw target from the same source directory share one validation
+  result and one bounded diagnostic. Validation stops with
+  `reference-complexity-exceeded` before attempting more than 16,384 unique
+  component/final-path `lstat` operations, including cache misses caused by
+  filesystem spelling aliases.
 - Linked targets are checked for existence/containment only and are never opened,
   parsed, imported, or executed.
 
@@ -421,8 +456,12 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
 - Internal DOM IDs come only from trusted counters. The exact CSP is:
 
   ```text
-  default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; script-src 'none'; style-src 'unsafe-inline'; form-action 'none'; frame-ancestors 'none'
+  default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src data:; script-src 'none'; style-src 'unsafe-inline'; form-action 'none'
   ```
+
+  `frame-ancestors` is intentionally absent because browsers ignore it when CSP
+  is delivered through a document `<meta>` element. Sites serving reports over
+  HTTP can add `frame-ancestors 'none'` as a response header.
 
   Report text uses `unicode-bidi: plaintext`. There are no remote assets or
   network-capable elements.
@@ -441,19 +480,26 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
   reference-style links, queries/fragments, percent encoding, and remote/inert
   schemes. Conflict tests include explicit true positives and scoped
   false-positive guards.
-- CLI integration tests cover threshold equality, combined-policy truth table,
-  invalid numerics, clean JSON stdout, stderr-only fatal errors, TTY/piped output,
-  `NO_COLOR`, exclusive report creation, concurrent creators, existing output,
+- CLI integration and runtime-boundary tests cover threshold equality,
+  combined-policy truth table, invalid numerics, clean JSON stdout, stderr-only
+  fatal errors, TTY/piped output, `NO_COLOR`, exclusive report creation,
+  concurrent creators, existing output,
   output-parent symlinks, output symlinks, and mode `0600` where supported.
 - A golden hero fixture contains three nested scopes, exact provenance, one
   duplicate, one conservative possible conflict, one broken link, and visible
   context totals. Terminal, JSON, and HTML must report the same facts.
-- Browser verification opens a generated report in an isolated Chrome profile,
-  checks closing-tag, event-handler, CSS, SVG, entity, bidi, and control-character
-  payloads remain inert text; verifies the exact CSP, zero scripts, zero external
-  resources, no console warnings, the accessibility tree, keyboard behavior,
-  printing, and layouts at 320, 768, 1024, and 1440 pixels.
-- Coverage floor: 90% statements/lines/functions and 85% branches for `src/`.
+- Browser verification opens a generated report in isolated Chromium, Firefox,
+  and WebKit profiles. Its four scopes use the exact 1,048,576-byte per-file and
+  4,194,304-byte aggregate limits. The suite checks closing-tag, event-handler,
+  CSS, SVG, entity, bidi, and control-character payloads remain inert text; the
+  exact CSP; zero scripts or external resources; a clean console; named
+  accessibility-tree lists/groups/counts; native keyboard disclosures; tagged,
+  script-free Chromium PDF output; layouts at 320, 768, 1024, and 1440 pixels;
+  and 200% text reflow at 320 pixels.
+- In-process coverage floor: 90% statements/lines/functions and 75% branches.
+  The process entry point and `src/cli/**` are excluded from V8 attribution
+  because they are exercised as real spawned executables; their cross-process
+  integration suite remains a mandatory verification gate.
 - Packaging verification runs publint, Are The Types Wrong, and a packed-tarball
   smoke test.
 
@@ -463,7 +509,8 @@ Trust boundary: every scanned path and byte of repository Markdown is hostile.
 
 Primary abuse cases and controls:
 
-- Path traversal or symlink escape → realpath containment checks before reads.
+- Path traversal or symlink escape → lexical containment, component-by-component
+  `lstat`, and final realpath containment before accepting a reference.
 - Memory/CPU exhaustion → numeric per-file/total/scope/instruction/reference
   caps, linear diagnostics, and no whole-repository crawl.
 - HTML/script injection → contextual HTML escaping, inert text rendering, strict
@@ -474,7 +521,8 @@ Primary abuse cases and controls:
   remote resources.
 - Terminal/workflow-command injection → every untrusted line has a trusted
   gutter and dangerous controls/default-ignorables are visibly escaped.
-- Output clobbering → exclusive no-follow creation, a real parent directory,
+- Output clobbering → exclusive no-follow creation, filesystem-identity-based
+  descendant detection across case/Unicode aliases, real parent components,
   private permissions, fsync, and no overwrite mode.
 - Supply-chain compromise → three pinned runtime dependencies, lockfile, clean
   `npm ci`, high-severity audit, immutable action SHAs, least-privilege workflow

@@ -98,6 +98,8 @@ npm run lint             # ESLint
 npm run format:check     # Prettier verification
 npm run typecheck        # Strict TypeScript checking
 npm run build            # ESM package and declarations
+npm run browser:install  # One-time isolated browser download
+npm run browser:check    # Chromium, Firefox, and WebKit report QA
 npm run package:check    # publint and Are The Types Wrong
 npm run audit            # High-severity dependency audit
 npm run verify           # Main local verification chain
@@ -126,15 +128,17 @@ Treat these as compatibility surfaces:
 
 - package root exports;
 - `ScopeglassReportV1` and `ScopeglassCheckResultV1`;
-- [`schemas/scopeglass-report-v1.schema.json`](schemas/scopeglass-report-v1.schema.json);
+- [`schemas/scopeglass-report-v1.schema.json`](schemas/scopeglass-report-v1.schema.json)
+  and
+  [`schemas/scopeglass-check-result-v1.schema.json`](schemas/scopeglass-check-result-v1.schema.json);
 - diagnostic and error codes;
 - CLI commands, options, streams, and exit codes;
 - deterministic ordering and root-relative paths.
 
-Additive report fields can be considered for a minor release. Removing or
-changing existing fields requires a major release. Any diagnostic ruleset
-change that can alter `check` outcomes must increment `rulesetVersion` and be
-reviewed as a breaking policy change.
+Adding, removing, or changing a report or check-result field requires a new
+schema version and a major release because the published schemas are strict.
+Any diagnostic ruleset change that can alter `check` outcomes must increment
+`rulesetVersion` and be reviewed as a breaking policy change.
 
 ## Documentation changes
 

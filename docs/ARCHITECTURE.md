@@ -74,7 +74,8 @@ I/O failures instead raise a `ScopeglassError`.
 Scopeglass resolves the target against the invocation working directory and
 selects a root using the documented `--root` or nearest-repository behavior. A
 Git worktree marker may be a `.git` directory or a small, valid `.git` file; the
-latter is inspected only to recognize the repository boundary.
+latter is inspected only to recognize the repository boundary. Its `gitdir`
+target is treated as opaque syntax and is never resolved or inspected.
 
 From the root to the target directory, discovery checks each directory for an
 `AGENTS.md`. Matching files form the scope chain. Precedence increases with
@@ -97,14 +98,19 @@ platform supports it, with identity validation retained as the portable
 fallback.
 
 Bytes must be valid UTF-8. A UTF-8 byte-order mark on an instruction file is
-accepted and removed before parsing. Aggregate size, scope count, Markdown
-depth, instruction, reference, diagnostic, and output limits bound work and
-memory. The exact limits live in `src/constants.ts` and are published in the
-[README](../README.md).
+accepted and removed before parsing. Aggregate size, scope count,
+parser-sensitive syntax, Markdown depth, instruction, reference, diagnostic,
+and output limits bound work and memory before and after parsing. Diagnostic
+normalization has separate input/output caps and skips oversized heuristic
+inputs without dropping instructions. The exact limits live in
+`src/constants.ts` and are published in the [README](../README.md).
 
-Local Markdown references are classified and checked for lexical and resolved
-containment. Scopeglass checks their existence; it does not open their content,
-follow a URL, import code, or invoke a tool mentioned by the document.
+Local Markdown references are classified and checked for lexical containment,
+then walked with `lstat` one component at a time before final resolved
+containment. Shared component and realpath results are cached for one analysis.
+Scopeglass stops at a symlink or junction rather than probing through it. It
+checks target existence and type; it does not open target content, follow a URL,
+import code, or invoke a tool mentioned by the document.
 
 See the engineering [security model](SECURITY.md) for the full threat analysis
 and known operating-system limitations.
@@ -159,11 +165,15 @@ const report = await analyze("src/index.ts", { root: "." });
 `AnalyzeOptions` accepts optional `cwd` and `root` values. The resolved result
 is `ScopeglassReportV1`.
 
-The machine-readable contract is
-[the report v1 JSON Schema](../schemas/scopeglass-report-v1.schema.json). Once a
-package is installed, the same schema is addressable through the declared
-`scopeglass/schema/report-v1.json` package export. This is a package contract,
-not a claim that version 0.1.0 has already been published.
+The machine-readable contracts are the
+[report v1 JSON Schema](../schemas/scopeglass-report-v1.schema.json) and
+[check-result v1 JSON Schema](../schemas/scopeglass-check-result-v1.schema.json).
+Once a package is installed, they are addressable through the declared
+`scopeglass/schema/report-v1.json` and
+`scopeglass/schema/check-result-v1.json` package exports. The check-result
+schema reuses the report contract through its stable `$id`; validators load both
+schemas. These are package contracts, not a claim that version 0.1.0 has already
+been published.
 
 Two versions evolve independently:
 

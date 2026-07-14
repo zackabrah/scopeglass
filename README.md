@@ -9,10 +9,11 @@ local Markdown references, and flags exact duplicates or narrowly matched
 possible conflicts. The same deterministic report can be rendered for a human,
 consumed as JSON, or saved as a self-contained HTML file.
 
-> **Release status:** v0.1.0 is being prepared from this repository. This README
-> does not claim that the package has been published to npm. CI release
-> automation and full browser verification must be completed before a release
-> is declared ready.
+> **Release status:** v0.1.0 is a locally verified source candidate.
+> The deterministic build, exact-tarball checks, dependency audits, and
+> Chromium/Firefox/WebKit security and accessibility suite pass from this
+> checkout. The package has not been published to npm; hosted CI evidence and
+> trusted-publisher environment setup require the GitHub repository.
 
 ## The five-minute value
 
@@ -20,7 +21,7 @@ From a source checkout, with Node.js 22.13 or newer:
 
 ```sh
 npm ci
-npm run dev -- inspect src/payments/charge.ts --no-color
+npm run dev -- inspect tests/fixtures/hero-repository/packages/payments/src/charge.ts --root tests/fixtures/hero-repository --no-color
 ```
 
 A representative terminal report looks like this:
@@ -30,17 +31,19 @@ Scopeglass
 Effective AGENTS.md instructions, with provenance.
 
 Overview
-│ Target: src/payments/charge.ts
-│ Context estimate: 612 tokens (1,835 UTF-8 bytes, utf8-bytes-div-3)
-│ 2 scopes · 7 instructions · 1 diagnostics
+│ Target: packages/payments/src/charge.ts
+│ Root discovery: explicit --root directory.
+│ Context estimate: 63 tokens (187 UTF-8 bytes, utf8-bytes-div-3)
+│ 3 scopes · 7 instructions · 3 diagnostics
 
 Scopes · root → target
-│ 1. AGENTS.md · precedence 0 · ~401 tokens
-│ 2. src/payments/AGENTS.md · precedence 1 · ~211 tokens
+│ 1. AGENTS.md · precedence 0 · ~29 tokens
+│ 2. packages/AGENTS.md · precedence 1 · ~15 tokens
+│ 3. packages/payments/AGENTS.md · precedence 2 · ~19 tokens
 
 Instructions
 │ 1. [Repository]
-│ Use strict TypeScript.
+│ Use pnpm.
 │    AGENTS.md:3-3 · paragraph · precedence 0
 ```
 
@@ -79,6 +82,12 @@ instead.
 `target` defaults to `.` and must already exist. Relative targets and roots are
 resolved from the process working directory.
 
+Without `--root`, Scopeglass walks upward from the target to the nearest valid
+`.git` directory or well-formed `.git` file. If no marker exists, it uses the
+target directory itself and does not include instructions from higher
+directories. Human reports show the selected method and a fallback hint; use
+`--root` when analyzing a non-Git tree with intended ancestor instructions.
+
 | Command                       | Purpose                                     | Important options                                                                                                           |
 | ----------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `scopeglass inspect [target]` | Print the effective chain and instructions. | `--format terminal\|json`, `--root <path>`, `--no-color`                                                                    |
@@ -102,7 +111,7 @@ written to stderr.
 ```sh
 scopeglass report packages/api/src/router.ts
 scopeglass report packages/api/src/router.ts --output artifacts/scopeglass.html
-scopeglass report packages/api/src/router.ts --output - > scopeglass.html
+scopeglass report packages/api/src/router.ts --output -
 ```
 
 The default destination is `scopeglass.html`. File output uses exclusive
@@ -110,6 +119,10 @@ creation, private mode `0600` where supported, and refuses to overwrite an
 existing file, symlink, junction, FIFO, or device. `--output -` streams HTML to
 stdout. Reports are static, contain no JavaScript or remote assets, and are not
 opened automatically.
+
+Use `--output <path>` for safe file creation. Redirecting `--output -` with a
+shell can overwrite an existing file and uses the shell's permissions rather
+than Scopeglass's exclusive `0600` creation safeguards.
 
 Reports contain instruction text and repository-relative paths. Treat them as
 repository data; an `AGENTS.md` file may itself contain secrets.
@@ -178,15 +191,21 @@ contract carries separate schema and diagnostic-ruleset versions.
 }
 ```
 
-The strict JSON Schema is available in the repository at
-[`schemas/scopeglass-report-v1.schema.json`](schemas/scopeglass-report-v1.schema.json)
-and through the package export `scopeglass/schema/report-v1.json` when the
-package is installed.
+Strict JSON Schemas are available for both top-level machine-output kinds:
 
-Additive report fields may appear in minor versions. Removing a field or
-changing its type or meaning requires a major release. A ruleset change that
-can change `check` outcomes increments `rulesetVersion` and is treated as a
-breaking policy change.
+- [`schemas/scopeglass-report-v1.schema.json`](schemas/scopeglass-report-v1.schema.json),
+  exported as `scopeglass/schema/report-v1.json`;
+- [`schemas/scopeglass-check-result-v1.schema.json`](schemas/scopeglass-check-result-v1.schema.json),
+  exported as `scopeglass/schema/check-result-v1.json`.
+
+The check-result schema references the report schema by its stable `$id`, so
+register both schemas with validators that do not resolve package resources
+automatically.
+
+The report shape is exact for schema version 1. Adding or removing a field, or
+changing its type or meaning, requires a new schema version and a major release.
+A ruleset change that can change `check` outcomes increments `rulesetVersion`
+and is also treated as a breaking policy change.
 
 ## Programmatic API
 
@@ -251,13 +270,24 @@ repositories.
 | Combined `AGENTS.md` input              |             4,194,304 bytes |
 | Extracted instructions                  |                       4,096 |
 | One extracted instruction               | 131,072 Unicode code points |
+| One section heading                     |     256 Unicode code points |
 | Local references                        |                       2,048 |
+| One local-reference target              |   4,096 Unicode code points |
+| Unique reference-path inspections       |                      16,384 |
+| Parser-sensitive syntax in one file     |           16,384 characters |
+| Parser-sensitive syntax in the chain    |           32,768 characters |
 | Markdown nesting depth                  |                         128 |
 | Diagnostics                             |                       4,096 |
 | Rendered terminal, JSON, or HTML output |            33,554,432 bytes |
 
 The context estimate is `ceil(UTF-8 bytes / 3)`. It is a transparent,
 cross-agent heuristic—not a model-specific tokenizer result.
+
+Duplicate/conflict heuristics normalize only instructions of at most 1,024
+Unicode code points, retain individual normalized forms of at most 8,192 code
+points, and process at most 4,194,304 normalized code points per report. Longer
+forms remain in the report but are omitted from those informational heuristics,
+preventing Unicode compatibility expansion from amplifying memory.
 
 ## Scope and non-goals
 
@@ -280,12 +310,17 @@ the private process described by [SECURITY.md](SECURITY.md), not a public issue.
 
 Useful contributor commands:
 
+Download the isolated test browsers once with `npm run browser:install` before
+running the browser gate.
+
 ```sh
 npm test
 npm run test:coverage
 npm run lint
 npm run typecheck
 npm run build
+npm run browser:install
+npm run browser:check
 npm run package:check
 npm run verify
 ```
