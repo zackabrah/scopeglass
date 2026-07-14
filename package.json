@@ -1,6 +1,6 @@
 {
   "name": "scopeglass",
-  "version": "0.1.0",
+  "version": "0.0.0-bootstrap.0",
   "description": "DevTools for AGENTS.md: inspect effective instructions, provenance, conflicts, references, and context cost.",
   "keywords": [
     "agents-md",
