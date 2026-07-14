@@ -200,14 +200,19 @@ a security boundary.
 
 ## Verification status
 
-The source candidate has local and hosted automated evidence for parsing,
-discovery, path safety, limits, diagnostics, rendering, CLI behavior,
-cross-browser review, dependency audits, and exact-tarball packaging. Hosted CI
-is green across Linux, macOS, and Windows on the supported Node.js matrix. The
-bootstrap registry tarball was checksum-verified, private vulnerability
-reporting is enabled, and publishing uses a protected environment plus
-stage-only OIDC trust. Final v0.1.0 staged-candidate approval, provenance, and
-post-publication verification remain tag-time gates described in
+Version 0.1.0 completed the local and hosted gates for parsing, discovery, path
+safety, limits, diagnostics, rendering, CLI behavior, cross-browser review,
+dependency audits, and exact-tarball packaging. Hosted CI is green across
+Linux, macOS, and Windows on the supported Node.js matrix.
+
+The protected tag workflow staged the release through OIDC, and explicit npm
+2FA approval published the exact 94,620-byte candidate with SHA-256
+`00ae4ec8f9a448a149759906e29d7d6a706655689c7acda5ec824732b9463def`.
+The preserved workflow artifact, npm stage, public registry tarball, and
+immutable GitHub release asset were byte-identical. Registry install, CLI, API,
+schema, audit, signature, and SLSA provenance checks passed. The temporary
+bootstrap dist-tag was removed and its placeholder version was deprecated.
+Private vulnerability reporting remains enabled. See the completed evidence in
 [RELEASE.md](RELEASE.md).
 
 The architectural rationale for keeping the pipeline local and deterministic

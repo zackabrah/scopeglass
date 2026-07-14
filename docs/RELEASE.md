@@ -309,6 +309,44 @@ for an exceptional unpublish. Coordinate vulnerability handling through
 [SECURITY.md](../SECURITY.md), preserve evidence, and communicate impact without
 exposing exploit details prematurely.
 
+## v0.1.0 release record
+
+- Version: `0.1.0`
+- Commit and tag: `f974745c9602a471152730f5e502a3945b74168a`, annotated
+  immutable tag `v0.1.0`
+- Schema version: `1`
+- Ruleset version: `1`
+- Release owner and required environment reviewer: `zackabrah`
+- Hosted matrix: Ubuntu 24.04, macOS 15, and Windows 2025 on Node.js 22.17.0,
+  24, and 26; isolated Chromium 149, Firefox 151, and WebKit 26.5 review
+- Protected-main verification:
+  [CI run 29331969200](https://github.com/zackabrah/scopeglass/actions/runs/29331969200)
+- Protected tag workflow and provenance:
+  [release run 29332166877](https://github.com/zackabrah/scopeglass/actions/runs/29332166877),
+  Ubuntu 24.04, Node.js 24, npm 11.18.0, stage-only OIDC trust
+- Dependency evidence: zero audit vulnerabilities; 276 dependency signatures
+  and 71 attestations verified before staging; a clean registry install
+  verified 37 signatures and the Scopeglass provenance attestation
+- Package file-list review: 24 regular files; no credentials, host paths,
+  lifecycle scripts, tests, lockfiles, or unexpected entries
+- Candidate: `scopeglass-0.1.0.tgz`, 94,620 bytes, SHA-256
+  `00ae4ec8f9a448a149759906e29d7d6a706655689c7acda5ec824732b9463def`,
+  integrity
+  `sha512-h+Rw+X9TG+dqQbpU930d17kXoN9FpPSLC5t9KklwiANTNTRDjfKCj1+FHlQkOpkhdQCkG9iBuSW7dO0vOdDfXg==`
+- Stage: `921ca987-657d-406a-85ea-4a2e6d9fa494`; downloaded and compared with
+  the workflow artifact, then approved with npm 2FA
+- Registry verification: the staged and public tarballs were byte-identical;
+  clean CLI, API, schema, audit, signature, and SLSA provenance checks passed;
+  `latest` resolves to `0.1.0`
+- Bootstrap retirement: the `bootstrap` dist-tag was removed and
+  `0.0.0-bootstrap.0` was deprecated with a replacement message
+- Immutable GitHub release:
+  [Scopeglass v0.1.0](https://github.com/zackabrah/scopeglass/releases/tag/v0.1.0),
+  including the verified tarball and checksum manifest
+- Known limitations: see [README.md](../README.md#the-five-minute-value), the
+  [hard limits](../README.md#hard-limits), and the
+  [security design](SECURITY.md#known-limits-and-residual-risk)
+
 ## Release record template
 
 ```text
