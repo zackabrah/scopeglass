@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { ANALYSIS_LIMITS } from "../../src/constants.js";
 import { ScopeglassError } from "../../src/error.js";
 import { extractMarkdownScope } from "../../src/analysis/markdown.js";
 
@@ -127,6 +128,57 @@ describe("Markdown extraction", () => {
     ]);
   });
 
+  it("uses the first matching CommonMark reference definition", () => {
+    const text = [
+      "Read [the guide][policy].",
+      "",
+      "[policy]: docs/first.md",
+      "[POLICY]: docs/second.md",
+      "",
+    ].join("\n");
+
+    const result = extractMarkdownScope({ ...baseInput, text });
+
+    expect(result.references).toEqual([
+      {
+        target: "docs/first.md",
+        source: { path: "AGENTS.md", startLine: 1, endLine: 1 },
+      },
+    ]);
+  });
+
+  it("enforces exact section-heading and reference-target boundaries", () => {
+    const exactHeading = "a".repeat(ANALYSIS_LIMITS.maxSectionCodePoints);
+    const exactSection = extractMarkdownScope({
+      ...baseInput,
+      text: `# ${exactHeading}\n\nRule.\n`,
+    });
+    expect(exactSection.instructions[0]?.section).toEqual([exactHeading]);
+
+    expect(() =>
+      extractMarkdownScope({
+        ...baseInput,
+        text: `# ${"a".repeat(ANALYSIS_LIMITS.maxSectionCodePoints + 1)}\n\nRule.\n`,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "section-too-long" }));
+
+    const exactReferenceTarget = "a".repeat(
+      ANALYSIS_LIMITS.maxReferenceTargetCodePoints,
+    );
+    const exactReference = extractMarkdownScope({
+      ...baseInput,
+      text: `[Exact](${exactReferenceTarget})\n`,
+    });
+    expect(exactReference.references[0]?.target).toBe(exactReferenceTarget);
+
+    expect(() =>
+      extractMarkdownScope({
+        ...baseInput,
+        text: `[Over](${"a".repeat(ANALYSIS_LIMITS.maxReferenceTargetCodePoints + 1)})\n`,
+      }),
+    ).toThrowError(expect.objectContaining({ code: "reference-too-long" }));
+  });
+
   it("enforces instruction, instruction-length, reference, and AST-depth bounds", () => {
     const tooManyInstructions = Array.from(
       { length: 4_097 },
@@ -160,6 +212,32 @@ describe("Markdown extraction", () => {
       expect.objectContaining({ code: "markdown-depth-exceeded" }),
     );
   });
+
+  it.each([
+    ["link labels", "["],
+    ["blockquotes", ">"],
+    ["dash lists", "- "],
+    ["plus lists", "+ "],
+    ["dot-ordered lists", "1. "],
+    ["paren-ordered lists", "1) "],
+  ])(
+    "rejects %s amplification before parsing hostile maximum-size input",
+    (_name, construct) => {
+      const repeats = Math.ceil(
+        ANALYSIS_LIMITS.maxFileBytes / construct.length,
+      );
+      expect(() =>
+        extractMarkdownScope({
+          ...baseInput,
+          text: construct
+            .repeat(repeats)
+            .slice(0, ANALYSIS_LIMITS.maxFileBytes),
+        }),
+      ).toThrowError(
+        expect.objectContaining({ code: "markdown-complexity-exceeded" }),
+      );
+    },
+  );
 
   it("throws only ScopeglassError for expected parsing limits", () => {
     try {

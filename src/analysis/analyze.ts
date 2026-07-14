@@ -72,6 +72,7 @@ export async function analyzeScope(
   const scopes: ScopeRecord[] = [];
   const instructions: InstructionRecord[] = [];
   const references: ExtractedReference[] = [];
+  let markdownSyntaxCharacterCount = 0;
 
   for (const discoveredScope of discovery.scopes) {
     const scopeId = `scope:${discoveredScope.path}`;
@@ -80,7 +81,11 @@ export async function analyzeScope(
       path: discoveredScope.path,
       precedence: discoveredScope.precedence,
       text: discoveredScope.text,
+      syntaxCharacterBudget:
+        ANALYSIS_LIMITS.maxMarkdownSyntaxCharactersTotal -
+        markdownSyntaxCharacterCount,
     });
+    markdownSyntaxCharacterCount += extracted.syntaxCharacterCount;
 
     enforceReportLimit(
       instructions.length,

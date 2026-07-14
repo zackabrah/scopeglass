@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, stat, symlink, writeFile } from "node:fs/promises";
+import { lstat, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -53,6 +53,30 @@ async function runCli(
     child.once("error", reject);
     child.once("close", (code) => {
       resolve({ code: code ?? -1, stdout, stderr });
+    });
+  });
+}
+
+async function runCliWithClosedStdout(
+  args: string[],
+  cwd: string,
+): Promise<{ code: number; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [tsxPath, cliPath, ...args], {
+      cwd,
+      env: { ...process.env, NO_COLOR: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stderr = "";
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.stdout.once("data", () => {
+      child.stdout.destroy();
+    });
+    child.once("error", reject);
+    child.once("close", (code) => {
+      resolve({ code: code ?? -1, stderr });
     });
   });
 }
@@ -195,8 +219,36 @@ describe("CLI", () => {
       expect(result.code).toBe(2);
       expect(result.stdout).toBe("");
       expect(result.stderr).toContain("max-tokens");
+      expect(result.stderr).not.toContain("invalid-option: error:");
     },
   );
+
+  it("uses one concise prefix for usage errors", async () => {
+    const result = await runCli(["inspect", ".", "--format", "xml"]);
+
+    expect(result).toEqual({
+      code: 2,
+      stdout: "",
+      stderr:
+        "scopeglass: invalid-option: option '--format <format>' argument 'xml' is invalid. format must be terminal or json.\n",
+    });
+  });
+
+  it("treats a closed stdout pipe as a clean termination", async () => {
+    const repository = await tempDirectory();
+    await repository.mkdir(".git");
+    await repository.write(
+      "AGENTS.md",
+      Array.from({ length: 4_096 }, (_, index) => `- Rule ${index}`).join("\n"),
+    );
+
+    const result = await runCliWithClosedStdout(
+      ["inspect", ".", "--no-color"],
+      repository.path,
+    );
+
+    expect(result).toEqual({ code: 0, stderr: "" });
+  });
 
   it("streams HTML or creates one private report without overwriting", async () => {
     const repository = await createRepository();
@@ -277,4 +329,44 @@ describe("CLI", () => {
     expect(result.stderr).toContain("private/missing.ts");
     expect(result.stderr).not.toContain(repository.path);
   });
+
+  it.each([
+    ["case", "CaseRepo", "caserepo"],
+    ["Unicode normalization", "Répo", "Répo"],
+    ["filesystem-specific Unicode fold", "σrepo", "ςrepo"],
+  ])(
+    "does not skip intermediate-symlink checks through a %s filesystem alias",
+    async (_aliasKind, repositoryName, aliasName) => {
+      const workspace = await tempDirectory();
+      const repositoryPath = await workspace.mkdir(repositoryName);
+      const aliasPath = path.join(workspace.path, aliasName);
+      try {
+        await lstat(aliasPath);
+      } catch {
+        return;
+      }
+
+      await workspace.mkdir(`${repositoryName}/.git`);
+      await workspace.write(
+        `${repositoryName}/AGENTS.md`,
+        "Use safe output.\n",
+      );
+      const outsidePath = await workspace.mkdir("outside/sub");
+      await symlink(
+        path.dirname(outsidePath),
+        path.join(repositoryPath, "linked"),
+        "dir",
+      );
+      const outputPath = path.join(aliasPath, "linked", "sub", "report.html");
+
+      const result = await runCli(["report", ".", "--output", outputPath], {
+        cwd: repositoryPath,
+      });
+
+      expect(result.code).toBe(2);
+      await expect(
+        lstat(path.join(outsidePath, "report.html")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    },
+  );
 });

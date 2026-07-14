@@ -1,4 +1,5 @@
-const dangerousCodePoint = /[\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}]/u;
+const dangerousCodePoint =
+  /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Default_Ignorable_Code_Point}]/u;
 
 export function visibleText(value: string): string {
   let output = "";

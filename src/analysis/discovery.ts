@@ -1,4 +1,4 @@
-import { lstat, realpath, stat } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { ANALYSIS_LIMITS } from "../constants.js";
@@ -173,39 +173,28 @@ async function validateExplicitRoot(
   }
 }
 
-async function validateGitFile(
-  markerText: string,
-  repositoryDirectory: string,
-): Promise<void> {
-  const match = GIT_DIRECTIVE.exec(markerText);
-  const gitDirectory = match?.[1];
-  if (gitDirectory === undefined) {
+function validateGitFile(markerText: string): void {
+  if (!GIT_DIRECTIVE.test(markerText)) {
     throw new ScopeglassError(
       "invalid-git-marker",
       "The .git file must contain exactly one gitdir directive.",
       { path: ".git" },
     );
   }
+}
 
+export async function resolveFallbackRootPath(
+  startDirectory: string,
+): Promise<string> {
   try {
-    const targetStats = await stat(
-      path.resolve(repositoryDirectory, gitDirectory),
-    );
-    if (!targetStats.isDirectory()) {
-      throw new ScopeglassError(
-        "invalid-git-marker",
-        "The .git file does not resolve to a directory.",
-        { path: ".git" },
-      );
-    }
+    return await realpath(startDirectory);
   } catch (error) {
-    if (error instanceof ScopeglassError) {
-      throw error;
-    }
     throw new ScopeglassError(
-      "invalid-git-marker",
-      "The .git file does not resolve to a readable directory.",
-      { path: ".git" },
+      isMissing(error) ? "target-not-found" : "unreadable-file",
+      isMissing(error)
+        ? "The fallback repository root disappeared during discovery."
+        : "The fallback repository root could not be resolved safely.",
+      { path: "." },
     );
   }
 }
@@ -217,7 +206,7 @@ async function discoverRoot(startDirectory: string): Promise<ResolvedRoot> {
     const marker = await inspectGitMarker(path.join(currentDirectory, ".git"));
     if (marker.kind !== "missing") {
       if (marker.kind === "file") {
-        await validateGitFile(marker.text, currentDirectory);
+        validateGitFile(marker.text);
       }
 
       let realPath: string;
@@ -243,7 +232,7 @@ async function discoverRoot(startDirectory: string): Promise<ResolvedRoot> {
 
     const parentDirectory = path.dirname(currentDirectory);
     if (parentDirectory === currentDirectory) {
-      const realPath = await realpath(startDirectory);
+      const realPath = await resolveFallbackRootPath(startDirectory);
       return {
         lexicalPath: startDirectory,
         realPath,

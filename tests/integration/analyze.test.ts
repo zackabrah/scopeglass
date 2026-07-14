@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  ANALYSIS_LIMITS,
   REPORT_SCHEMA_VERSION,
   RULESET_VERSION,
   TOKEN_ESTIMATE_METHOD,
@@ -168,6 +169,24 @@ describe("analyze", () => {
     await expect(analyze(target)).rejects.toMatchObject({
       code: "invalid-encoding",
       path: "AGENTS.md",
+    });
+  });
+
+  it("enforces the parser-complexity budget across the complete scope chain", async () => {
+    const repository = await tempDirectory();
+    await repository.mkdir(".git");
+    const syntaxPerScope = Math.floor(
+      ANALYSIS_LIMITS.maxMarkdownSyntaxCharactersTotal / 3,
+    );
+    const syntax = "`".repeat(syntaxPerScope + 1);
+    await repository.write("AGENTS.md", syntax);
+    await repository.write("packages/AGENTS.md", syntax);
+    await repository.write("packages/api/AGENTS.md", syntax);
+    const target = await repository.mkdir("packages/api/src");
+
+    await expect(analyze(target)).rejects.toMatchObject({
+      code: "markdown-complexity-exceeded",
+      path: "packages/api/AGENTS.md",
     });
   });
 });

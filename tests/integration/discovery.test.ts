@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { ANALYSIS_LIMITS } from "../../src/constants.js";
 import { ScopeglassError } from "../../src/error.js";
-import { discoverScopeChain } from "../../src/analysis/discovery.js";
+import {
+  discoverScopeChain,
+  resolveFallbackRootPath,
+} from "../../src/analysis/discovery.js";
 import {
   createTempDirectory,
   type TempDirectory,
@@ -90,6 +93,39 @@ describe("scope discovery", () => {
     expect(result.target).toBe("src");
   });
 
+  it("rejects a git marker that is itself a symbolic link", async () => {
+    const linked = await tempDirectory();
+    await linked.mkdir("repo/git-data");
+    await symlink("git-data", path.join(linked.path, "repo/.git"), "dir");
+    const linkedTarget = await linked.mkdir("repo/src");
+
+    await expect(discoverScopeChain(linkedTarget)).rejects.toMatchObject({
+      code: "invalid-git-marker",
+      path: ".git",
+    });
+  });
+
+  it("recognizes exact gitdir directives without dereferencing their targets", async () => {
+    const repository = await tempDirectory();
+    const target = await repository.mkdir("repo/src");
+    const gitDirectories = [
+      "../missing-relative-git-directory",
+      path.join(repository.path, "missing-absolute-git-directory"),
+      String.raw`\\scopeglass.invalid\share\repository.git`,
+    ];
+
+    for (const gitDirectory of gitDirectories) {
+      await repository.write("repo/.git", `gitdir: ${gitDirectory}\n`);
+
+      const result = await discoverScopeChain(target);
+
+      expect(result.rootDiscovery).toEqual({
+        method: "git-file",
+        marker: ".git",
+      });
+    }
+  });
+
   it("falls back to the target directory when no marker exists", async () => {
     const repository = await tempDirectory();
     const target = await repository.mkdir("standalone/project");
@@ -101,6 +137,18 @@ describe("scope discovery", () => {
     expect(result.rootDiscovery).toEqual({ method: "target-fallback" });
     expect(result.target).toBe(".");
     expect(result.scopes.map((scope) => scope.path)).toEqual(["AGENTS.md"]);
+  });
+
+  it("wraps a fallback directory that disappeared in a structured error", async () => {
+    const repository = await tempDirectory();
+    const disappearedPath = path.join(repository.path, "disappeared");
+
+    await expect(
+      resolveFallbackRootPath(disappearedPath),
+    ).rejects.toMatchObject({
+      code: "target-not-found",
+      path: ".",
+    });
   });
 
   it("supports an explicit root and rejects a target outside it", async () => {
@@ -117,6 +165,25 @@ describe("scope discovery", () => {
       code: "target-outside-root",
       path: "../outside",
     });
+  });
+
+  it("rejects missing, non-directory, and symlink explicit roots", async () => {
+    const repository = await tempDirectory();
+    const target = await repository.mkdir("repo/src");
+    const rootFile = await repository.write("root-file", "not a root\n");
+    const rootDirectory = await repository.mkdir("real-root");
+    const rootLink = path.join(repository.path, "root-link");
+    await symlink(rootDirectory, rootLink, "dir");
+
+    for (const root of [
+      path.join(repository.path, "missing-root"),
+      rootFile,
+      rootLink,
+    ]) {
+      await expect(discoverScopeChain(target, { root })).rejects.toMatchObject({
+        code: "invalid-root",
+      });
+    }
   });
 
   it("rejects target and AGENTS.md symlinks even when they stay in-root", async () => {
@@ -140,7 +207,21 @@ describe("scope discovery", () => {
     });
   });
 
+  it("rejects a non-file AGENTS.md entry", async () => {
+    const repository = await tempDirectory();
+    await repository.mkdir("repo/.git");
+    await repository.mkdir("repo/AGENTS.md");
+    const target = await repository.mkdir("repo/src");
+
+    await expect(discoverScopeChain(target)).rejects.toMatchObject({
+      code: "unreadable-file",
+      path: "AGENTS.md",
+    });
+  });
+
   it.each([
+    "gitdir: \n",
+    "gitdir:missing\n",
     "gitdir: missing\nextra\n",
     "gitdir: missing\0\n",
     "not-a-git-marker\n",

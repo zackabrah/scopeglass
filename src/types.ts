@@ -21,10 +21,15 @@ export interface TokenEstimate {
   total: number;
 }
 
-export interface RootDiscovery {
-  method: "explicit" | "git-directory" | "git-file" | "target-fallback";
-  marker?: ".git";
-}
+export type RootDiscovery =
+  | {
+      method: "explicit" | "target-fallback";
+      marker?: never;
+    }
+  | {
+      method: "git-directory" | "git-file";
+      marker: ".git";
+    };
 
 export interface ScopeRecord {
   id: string;
@@ -117,7 +122,11 @@ export type ScopeglassErrorCode =
   | "scope-limit-exceeded"
   | "instruction-limit-exceeded"
   | "instruction-too-long"
+  | "section-too-long"
   | "reference-limit-exceeded"
+  | "reference-too-long"
+  | "reference-complexity-exceeded"
+  | "markdown-complexity-exceeded"
   | "markdown-depth-exceeded"
   | "diagnostic-limit-exceeded"
   | "output-too-large"

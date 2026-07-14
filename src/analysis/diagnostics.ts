@@ -45,13 +45,63 @@ interface PolarizedInstruction {
   core: string;
 }
 
-function normalizeInstruction(text: string): string {
-  return text
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/\p{P}+/gu, " ")
-    .replace(/\s+/gu, " ")
-    .trim();
+function boundedCodePointCount(
+  text: string,
+  limit: number,
+): number | undefined {
+  let codePoints = 0;
+  let offset = 0;
+  while (offset < text.length) {
+    const codePoint = text.codePointAt(offset);
+    offset += codePoint !== undefined && codePoint > 0xffff ? 2 : 1;
+    codePoints += 1;
+    if (codePoints > limit) {
+      return undefined;
+    }
+  }
+  return codePoints;
+}
+
+interface NormalizedInstruction {
+  codePoints: number;
+  text: string;
+}
+
+function normalizeInstruction(text: string): NormalizedInstruction | undefined {
+  if (
+    boundedCodePointCount(
+      text,
+      ANALYSIS_LIMITS.maxDiagnosticInstructionCodePoints,
+    ) === undefined
+  ) {
+    return undefined;
+  }
+
+  const compatibilityNormalized = text.normalize("NFKC");
+  const compatibilityCodePoints = boundedCodePointCount(
+    compatibilityNormalized,
+    ANALYSIS_LIMITS.maxNormalizedDiagnosticCodePoints,
+  );
+  if (compatibilityCodePoints === undefined) {
+    return undefined;
+  }
+
+  const lowerCased = compatibilityNormalized.toLowerCase();
+  const lowerCasedCodePoints = boundedCodePointCount(
+    lowerCased,
+    ANALYSIS_LIMITS.maxNormalizedDiagnosticCodePoints,
+  );
+  if (lowerCasedCodePoints === undefined) {
+    return undefined;
+  }
+
+  return {
+    codePoints: lowerCasedCodePoints,
+    text: lowerCased
+      .replace(/\p{P}+/gu, " ")
+      .replace(/\s+/gu, " ")
+      .trim(),
+  };
 }
 
 function matchingPrefixLength(
@@ -70,8 +120,9 @@ function matchingPrefixLength(
 function polarize(
   instruction: InstructionRecord,
   order: number,
+  normalized: string,
 ): PolarizedInstruction | undefined {
-  const tokens = normalizeInstruction(instruction.text).split(" ");
+  const tokens = normalized.split(" ");
   const negativeLength = matchingPrefixLength(tokens, 0, negativePrefixes);
   const positiveLength = matchingPrefixLength(tokens, 0, positivePrefixes);
   const polarity: Polarity | undefined =
@@ -118,9 +169,20 @@ export function collectInstructionDiagnostics(
     string,
     Partial<Record<Polarity, PolarizedInstruction>>
   >();
+  let normalizedCodePoints = 0;
 
   instructions.forEach((instruction, order) => {
-    const normalized = normalizeInstruction(instruction.text);
+    const normalization = normalizeInstruction(instruction.text);
+    if (
+      normalization === undefined ||
+      normalization.codePoints >
+        ANALYSIS_LIMITS.maxTotalNormalizedDiagnosticCodePoints -
+          normalizedCodePoints
+    ) {
+      return;
+    }
+    normalizedCodePoints += normalization.codePoints;
+    const normalized = normalization.text;
     if (normalized !== "") {
       const duplicateGroup = duplicateGroups.get(normalized);
       if (duplicateGroup === undefined) {
@@ -130,7 +192,7 @@ export function collectInstructionDiagnostics(
       }
     }
 
-    const polarized = polarize(instruction, order);
+    const polarized = polarize(instruction, order, normalized);
     if (polarized === undefined) {
       return;
     }

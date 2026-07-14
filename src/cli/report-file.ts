@@ -13,6 +13,11 @@ interface ParentIdentity {
   stats: Stats;
 }
 
+interface DescendantLocation {
+  realCwd: string;
+  relativeParent: string;
+}
+
 function sameFile(left: Stats, right: Stats): boolean {
   return left.dev === right.dev && left.ino === right.ino;
 }
@@ -24,20 +29,16 @@ function reportWriteError(
   return new ScopeglassError("write-failed", message, { path: displayPath });
 }
 
-async function validateDescendantComponents(
-  cwd: string,
+async function descendantLocation(
+  lexicalCwd: string,
   parentPath: string,
   displayPath: string,
-): Promise<void> {
-  const lexicalCwd = path.resolve(cwd);
-  const relativeParent = containedRelativePath(lexicalCwd, parentPath);
-  if (relativeParent === undefined || relativeParent === "") {
-    return;
-  }
-
-  let currentPath: string;
+): Promise<DescendantLocation | undefined> {
+  let realCwd: string;
+  let realCwdStats: Stats;
   try {
-    currentPath = await realpath(lexicalCwd);
+    realCwd = await realpath(lexicalCwd);
+    realCwdStats = await lstat(realCwd);
   } catch {
     throw reportWriteError(
       displayPath,
@@ -45,7 +46,60 @@ async function validateDescendantComponents(
     );
   }
 
-  for (const component of relativeParent.split(path.sep)) {
+  const exactRelativeParent = containedRelativePath(lexicalCwd, parentPath);
+  if (exactRelativeParent !== undefined) {
+    return { realCwd, relativeParent: exactRelativeParent };
+  }
+
+  const descendantComponents: string[] = [];
+  let candidateAncestor = parentPath;
+
+  for (;;) {
+    try {
+      const candidateStats = await lstat(candidateAncestor);
+      if (
+        !candidateStats.isSymbolicLink() &&
+        candidateStats.isDirectory() &&
+        sameFile(realCwdStats, candidateStats)
+      ) {
+        return {
+          realCwd,
+          relativeParent: descendantComponents.reverse().join(path.sep),
+        };
+      }
+    } catch {
+      return undefined;
+    }
+
+    const nextAncestor = path.dirname(candidateAncestor);
+    if (nextAncestor === candidateAncestor) {
+      break;
+    }
+    descendantComponents.push(path.basename(candidateAncestor));
+    candidateAncestor = nextAncestor;
+  }
+
+  return undefined;
+}
+
+async function validateDescendantComponents(
+  cwd: string,
+  parentPath: string,
+  displayPath: string,
+): Promise<void> {
+  const lexicalCwd = path.resolve(cwd);
+  const descendant = await descendantLocation(
+    lexicalCwd,
+    parentPath,
+    displayPath,
+  );
+  if (descendant === undefined || descendant.relativeParent === "") {
+    return;
+  }
+
+  let currentPath = descendant.realCwd;
+
+  for (const component of descendant.relativeParent.split(path.sep)) {
     currentPath = path.join(currentPath, component);
     let stats: Stats;
     try {

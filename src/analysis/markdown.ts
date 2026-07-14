@@ -17,6 +17,7 @@ export interface ExtractMarkdownScopeInput {
   path: string;
   precedence: number;
   text: string;
+  syntaxCharacterBudget?: number;
 }
 
 export interface ExtractedReference {
@@ -27,9 +28,30 @@ export interface ExtractedReference {
 export interface ExtractMarkdownScopeResult {
   instructions: InstructionRecord[];
   references: ExtractedReference[];
+  syntaxCharacterCount: number;
 }
 
 type MarkdownNode = Root | RootContent;
+
+const parserSensitiveSyntax = new Set([
+  "\t",
+  "\n",
+  "\r",
+  "!",
+  "&",
+  ")",
+  "*",
+  "+",
+  "-",
+  ".",
+  "<",
+  ">",
+  "[",
+  "\\",
+  "]",
+  "_",
+  "`",
+]);
 
 interface InstructionWalkContext {
   insideBlockquote: boolean;
@@ -81,7 +103,7 @@ function normalizedPlainText(node: MarkdownNode): string {
   return plainText(node).replace(/\s+/gu, " ").trim();
 }
 
-function exceedsInstructionLength(text: string): boolean {
+function exceedsCodePointLimit(text: string, limit: number): boolean {
   let codePoints = 0;
   let offset = 0;
 
@@ -89,12 +111,31 @@ function exceedsInstructionLength(text: string): boolean {
     const codePoint = text.codePointAt(offset);
     offset += codePoint !== undefined && codePoint > 0xffff ? 2 : 1;
     codePoints += 1;
-    if (codePoints > ANALYSIS_LIMITS.maxInstructionCodePoints) {
+    if (codePoints > limit) {
       return true;
     }
   }
 
   return false;
+}
+
+function markdownSyntaxCharacterCount(text: string, limit: number): number {
+  let count = 0;
+
+  for (let offset = 0; offset < text.length; offset += 1) {
+    const character = text[offset];
+    if (character === "\r" && text[offset + 1] === "\n") {
+      offset += 1;
+    }
+    if (character !== undefined && parserSensitiveSyntax.has(character)) {
+      count += 1;
+      if (count > limit) {
+        return count;
+      }
+    }
+  }
+
+  return count;
 }
 
 function contributesToDepth(node: MarkdownNode): boolean {
@@ -144,7 +185,10 @@ function collectDefinitions(
   definitions: Map<string, string>,
 ): void {
   if (node.type === "definition") {
-    definitions.set(definitionKey(node.identifier), node.url);
+    const key = definitionKey(node.identifier);
+    if (!definitions.has(key)) {
+      definitions.set(key, node.url);
+    }
     return;
   }
   if (isParent(node)) {
@@ -169,6 +213,23 @@ function isReferenceCandidate(target: string): boolean {
 export function extractMarkdownScope(
   input: ExtractMarkdownScopeInput,
 ): ExtractMarkdownScopeResult {
+  const syntaxCharacterBudget = Math.min(
+    ANALYSIS_LIMITS.maxMarkdownSyntaxCharactersPerFile,
+    input.syntaxCharacterBudget ??
+      ANALYSIS_LIMITS.maxMarkdownSyntaxCharactersPerFile,
+  );
+  const syntaxCharacterCount = markdownSyntaxCharacterCount(
+    input.text,
+    syntaxCharacterBudget,
+  );
+  if (syntaxCharacterCount > syntaxCharacterBudget) {
+    throw new ScopeglassError(
+      "markdown-complexity-exceeded",
+      `Markdown exceeds the safe parser complexity budget of ${syntaxCharacterBudget} parser-sensitive characters.`,
+      { path: input.path },
+    );
+  }
+
   const root = fromMarkdown(input.text);
   enforceMarkdownDepth(root, input.path);
 
@@ -185,7 +246,7 @@ export function extractMarkdownScope(
     if (text.length === 0) {
       return;
     }
-    if (exceedsInstructionLength(text)) {
+    if (exceedsCodePointLimit(text, ANALYSIS_LIMITS.maxInstructionCodePoints)) {
       throw new ScopeglassError(
         "instruction-too-long",
         `An instruction exceeds ${ANALYSIS_LIMITS.maxInstructionCodePoints} code points.`,
@@ -220,8 +281,18 @@ export function extractMarkdownScope(
     context: InstructionWalkContext,
   ): void {
     if (node.type === "heading") {
+      const heading = normalizedPlainText(node);
+      if (
+        exceedsCodePointLimit(heading, ANALYSIS_LIMITS.maxSectionCodePoints)
+      ) {
+        throw new ScopeglassError(
+          "section-too-long",
+          `A section heading exceeds ${ANALYSIS_LIMITS.maxSectionCodePoints} code points.`,
+          { path: input.path },
+        );
+      }
       section = section.slice(0, node.depth - 1);
-      section.push(normalizedPlainText(node));
+      section.push(heading);
       return;
     }
     if (node.type === "paragraph") {
@@ -248,6 +319,18 @@ export function extractMarkdownScope(
   function addReference(node: MarkdownNode, target: string): void {
     if (!isReferenceCandidate(target)) {
       return;
+    }
+    if (
+      exceedsCodePointLimit(
+        target,
+        ANALYSIS_LIMITS.maxReferenceTargetCodePoints,
+      )
+    ) {
+      throw new ScopeglassError(
+        "reference-too-long",
+        `A local reference target exceeds ${ANALYSIS_LIMITS.maxReferenceTargetCodePoints} code points.`,
+        { path: input.path },
+      );
     }
     if (references.length >= ANALYSIS_LIMITS.maxReferences) {
       throw new ScopeglassError(
@@ -282,5 +365,5 @@ export function extractMarkdownScope(
   walkInstructions(root, { insideBlockquote: false, parentType: undefined });
   walkReferences(root);
 
-  return { instructions, references };
+  return { instructions, references, syntaxCharacterCount };
 }

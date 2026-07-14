@@ -5,7 +5,11 @@ import type {
   ScopeglassCheckResultV1,
   ScopeglassReportV1,
 } from "../types.js";
-import { assertOutputSize, visibleText } from "./shared.js";
+import {
+  assertOutputSize,
+  describeRootDiscovery,
+  visibleText,
+} from "./shared.js";
 
 export interface TerminalRenderOptions {
   color: boolean;
@@ -29,6 +33,10 @@ function untrusted(value: string): string {
   return `│ ${visibleText(value)}`;
 }
 
+function countLabel(count: number, singular: string): string {
+  return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}
+
 export function renderTerminal(
   report: ScopeglassReportV1,
   options: TerminalRenderOptions,
@@ -40,11 +48,12 @@ export function renderTerminal(
     "",
     colors.bold("Overview"),
     untrusted(`Target: ${report.target}`),
+    untrusted(describeRootDiscovery(report.rootDiscovery)),
     untrusted(
       `Context estimate: ${report.tokenEstimate.total.toLocaleString("en-US")} tokens (${report.tokenEstimate.bytes.toLocaleString("en-US")} UTF-8 bytes, ${report.tokenEstimate.method})`,
     ),
     untrusted(
-      `${report.summary.scopeCount} scopes · ${report.summary.instructionCount} instructions · ${report.diagnostics.length} diagnostics`,
+      `${countLabel(report.summary.scopeCount, "scope")} · ${countLabel(report.summary.instructionCount, "instruction")} · ${countLabel(report.diagnostics.length, "diagnostic")}`,
     ),
     "",
     colors.bold("Scopes · root → target"),
@@ -88,9 +97,7 @@ export function renderTerminal(
 
   for (const diagnostic of report.diagnostics) {
     lines.push(
-      untrusted(
-        `${severityLabel(diagnostic.severity, colors)} ${diagnostic.code}: ${diagnostic.message}`,
-      ),
+      `│ ${severityLabel(diagnostic.severity, colors)} ${diagnostic.code}: ${visibleText(diagnostic.message)}`,
     );
     for (const source of diagnostic.sources) {
       lines.push(

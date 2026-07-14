@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 
 import { runCli } from "./cli/program.js";
-import { readPackageVersion, writeUnexpectedError } from "./cli/runtime.js";
+import {
+  installStdoutErrorHandler,
+  readPackageVersion,
+  writeUnexpectedError,
+} from "./cli/runtime.js";
+
+installStdoutErrorHandler();
 
 try {
   const version = await readPackageVersion(

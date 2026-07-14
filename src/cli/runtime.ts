@@ -24,6 +24,17 @@ export function terminalColorEnabled(requested: boolean): boolean {
   );
 }
 
+export function installStdoutErrorHandler(): void {
+  process.stdout.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code === "EPIPE") {
+      process.exit(0);
+    }
+
+    writeUnexpectedError();
+    process.exit(2);
+  });
+}
+
 export function writeScopeglassError(error: ScopeglassError): void {
   const pathText = error.path === undefined ? "" : ` [${error.path}]`;
   process.stderr.write(
@@ -32,8 +43,11 @@ export function writeScopeglassError(error: ScopeglassError): void {
 }
 
 export function writeUsageError(message: string): void {
+  const normalizedMessage = message.startsWith("error: ")
+    ? message.slice("error: ".length)
+    : message;
   process.stderr.write(
-    `${visibleText(`scopeglass: invalid-option: ${message}`)}\n`,
+    `${visibleText(`scopeglass: invalid-option: ${normalizedMessage}`)}\n`,
   );
 }
 
