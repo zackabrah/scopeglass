@@ -1,0 +1,2 @@
+# Keep formatting deterministic across GitHub-hosted operating systems.
+* text=auto eol=lf

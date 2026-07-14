@@ -15,6 +15,9 @@ const sourceScriptPath = fileURLToPath(
 const releaseWorkflowPath = fileURLToPath(
   new URL("../../.github/workflows/release.yml", import.meta.url),
 );
+const gitAttributesPath = fileURLToPath(
+  new URL("../../.gitattributes", import.meta.url),
+);
 const temporaryDirectories: TempDirectory[] = [];
 
 async function runReleaseCheck(changelog: string, refName = "v0.1.0") {
@@ -49,6 +52,12 @@ afterEach(async () => {
 });
 
 describe("release contract", () => {
+  it("forces LF checkouts for text files on every operating system", async () => {
+    const attributes = await readFile(gitAttributesPath, "utf8");
+
+    expect(attributes.split(/\r?\n/u)).toContain("* text=auto eol=lf");
+  });
+
   it("checks tracked and untracked source after verification and before publication", async () => {
     const workflow = await readFile(releaseWorkflowPath, "utf8");
     const verify = workflow.indexOf("- name: Build and verify package once");
