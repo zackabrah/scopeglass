@@ -258,9 +258,16 @@ Only after all prior gates have evidence and explicit release approval:
    `npm stage download <stage-id>` to inspect the registry-staged candidate.
    Compare its checksum and package contents with the workflow artifact.
 6. If and only if they match, run `npm stage approve <stage-id>` and complete
-   the registry's 2FA challenge. Reject a mismatched candidate with
-   `npm stage reject <stage-id>` and create a new reviewed release commit.
-7. Create release notes from the changelog, including schema/ruleset versions,
+   the registry's 2FA challenge. For a mismatched or otherwise invalid
+   candidate, record its stage ID and metadata, run
+   `npm stage reject <stage-id>`, complete the registry's 2FA challenge, and
+   verify that `npm stage list scopeglass` no longer reports the rejected ID.
+   Never approve an invalid stage.
+7. Rerun the same immutable tag and commit only when a failure is demonstrably
+   transient and no source, artifact, metadata, or release control changed. Any
+   source or artifact change requires a new reviewed version commit and a new
+   SemVer tag. Never move, delete, or reuse an existing release tag.
+8. Create release notes from the changelog, including schema/ruleset versions,
    supported Node.js range, checksum, known limitations, and security contact.
 
 The exact staging command belongs in the reviewed release workflow. Direct
@@ -284,9 +291,16 @@ Mark the release complete only after post-publication checks are recorded.
 
 ## Failed release or security response
 
-Stop before publication whenever evidence is incomplete or a gate fails. Fix
-the issue on a new reviewed commit, produce a new candidate, and repeat affected
-and downstream gates.
+Stop before publication whenever evidence is incomplete or a gate fails. If a
+registry stage exists, record it, reject it with 2FA, and verify that it is gone
+before continuing. Preserve the failed workflow, stage, and artifact evidence.
+
+After an immutable release tag exists, rerun that exact tag and commit only for
+a transient infrastructure failure that requires no source, artifact, metadata,
+or control change. For any source or artifact fix, increment the package to a
+new SemVer version, use a new reviewed commit, produce a new candidate, and
+create a new immutable tag. Never retarget, move, delete, or reuse the failed
+tag. Repeat every affected and downstream gate for the replacement version.
 
 After publication, npm versions are immutable. Do not attempt to replace a
 tarball. Depending on severity and registry policy, maintainers may deprecate a
