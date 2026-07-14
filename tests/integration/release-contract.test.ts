@@ -247,10 +247,17 @@ describe("release contract", () => {
 
     expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toBe("");
-    expect(npmArguments).toEqual([
-      "stage",
-      "publish",
-      tarballPath,
+    expect(npmArguments).toHaveLength(7);
+    expect(npmArguments.slice(0, 2)).toEqual(["stage", "publish"]);
+    const capturedTarballPath = npmArguments[2];
+    expect(capturedTarballPath).toBeTypeOf("string");
+    if (capturedTarballPath === undefined) {
+      throw new Error("npm stage publish did not receive a tarball path.");
+    }
+    expect(await realpath(capturedTarballPath)).toBe(
+      await realpath(tarballPath),
+    );
+    expect(npmArguments.slice(3)).toEqual([
       "--access",
       "public",
       "--provenance",
