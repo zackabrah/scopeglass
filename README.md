@@ -1,5 +1,10 @@
 # Scopeglass
 
+[![Tests](https://img.shields.io/github/actions/workflow/status/zackabrah/scopeglass/ci.yml?branch=main&label=tests&logo=githubactions&logoColor=white)](https://github.com/zackabrah/scopeglass/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/scopeglass?logo=npm)](https://www.npmjs.com/package/scopeglass)
+[![Node.js](https://img.shields.io/node/v/scopeglass?logo=nodedotjs)](https://www.npmjs.com/package/scopeglass)
+[![License](https://img.shields.io/github/license/zackabrah/scopeglass)](LICENSE)
+
 **See every `AGENTS.md` rule that applies to a path—ordered, attributed, and
 checked without sending repository content anywhere.**
 
