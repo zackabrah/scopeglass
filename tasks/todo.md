@@ -35,7 +35,7 @@
   - Acceptance: production repository, immutable least-privilege CI, and OIDC
     provenance release of the exact verified tarball
   - Verify: docs links, workflow inspection, package checks, audit
-- [ ] Task 9: Independent multi-axis review and release-candidate verification
+- [x] Task 9: Independent multi-axis review and release-candidate verification
   - Acceptance: all required findings resolved; hostile corpus and golden fixture
     pass across supported platforms
   - Verify: full verification, audit, browser QA, clean git status
@@ -45,8 +45,8 @@
         Chromium/Firefox/WebKit gates pass
   - [x] Hosted Linux/macOS/Windows matrix, protected release environment,
         bootstrap registry verification, and independent reviews pass
-  - [ ] v0.1.0 staged approval, provenance, and final registry evidence remain
-        tag-time gates
+  - [x] v0.1.0 staged approval, provenance, final registry verification, and
+        immutable GitHub release evidence pass
 
 ## Verification record
 
@@ -69,3 +69,21 @@ Local verification on 2026-07-14:
   attestations.
 - Independent contract and reliability rechecks reported no remaining P1/P2
   findings after the final regression fixes.
+- Protected `main` CI run
+  [29331969200](https://github.com/zackabrah/scopeglass/actions/runs/29331969200)
+  passed all 10 jobs on commit `f974745c9602a471152730f5e502a3945b74168a`.
+- Protected release run
+  [29332166877](https://github.com/zackabrah/scopeglass/actions/runs/29332166877)
+  verified the immutable `v0.1.0` tag, preserved the exact candidate, and
+  staged it with OIDC provenance.
+- npm stage `921ca987-657d-406a-85ea-4a2e6d9fa494` was inspected and approved
+  with 2FA. The local candidate, workflow artifact, stage, public registry
+  tarball, and GitHub release asset were byte-identical: 94,620 bytes, 24 files,
+  SHA-256
+  `00ae4ec8f9a448a149759906e29d7d6a706655689c7acda5ec824732b9463def`.
+- Clean registry CLI, API, schema, vulnerability, signature, and provenance
+  checks passed. `latest` resolves to `0.1.0`; the bootstrap dist-tag was
+  removed and its placeholder version was deprecated.
+- GitHub Release
+  [v0.1.0](https://github.com/zackabrah/scopeglass/releases/tag/v0.1.0) is
+  published, latest, and immutable with the verified tarball and manifest.
