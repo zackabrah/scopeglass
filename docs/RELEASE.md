@@ -324,9 +324,9 @@ exposing exploit details prematurely.
 - Protected tag workflow and provenance:
   [release run 29332166877](https://github.com/zackabrah/scopeglass/actions/runs/29332166877),
   Ubuntu 24.04, Node.js 24, npm 11.18.0, stage-only OIDC trust
-- Dependency evidence: zero audit vulnerabilities; 276 dependency signatures
-  and 71 attestations verified before staging; a clean registry install
-  verified 37 signatures and the Scopeglass provenance attestation
+- Dependency evidence: zero audit vulnerabilities; the release runner verified
+  278 registry signatures and 73 attestations before staging; a clean registry
+  install verified 37 signatures and the Scopeglass provenance attestation
 - Package file-list review: 24 regular files; no credentials, host paths,
   lifecycle scripts, tests, lockfiles, or unexpected entries
 - Candidate: `scopeglass-0.1.0.tgz`, 94,620 bytes, SHA-256
