@@ -1,10 +1,11 @@
 # Scopeglass release process
 
-This checklist governs an actual release. Scopeglass 0.1.0 is a locally verified
-source candidate, but it remains unpublished and marked `Unreleased`. The
-repository contains CI and OIDC release workflows; hosted matrix, provenance,
-and registry evidence exist only after those workflows run from the configured
-GitHub repository. Record evidence for every gate during an actual release.
+This checklist governs an actual release. Scopeglass 0.1.0 is the first public
+release. Hosted CI, a protected npm environment, stage-only trusted publishing,
+private vulnerability reporting, immutable version tags, and immutable GitHub
+releases are configured. The tag workflow still requires explicit environment
+approval, staged-tarball inspection, npm 2FA approval, and post-publication
+verification for every release.
 
 ## Release principles
 
@@ -21,7 +22,9 @@ GitHub repository. Record evidence for every gate during an actual release.
 ## Roles and evidence
 
 The release owner runs the checklist and collects commands, versions, checksums,
-and links to review results. A second maintainer should review:
+and links to review results. A second maintainer should review the following. If
+the project has only one direct maintainer, record an explicit solo-maintainer
+exception and independent review evidence before any registry write.
 
 - public API and schema compatibility;
 - dependency and security changes;
@@ -50,8 +53,8 @@ record.
 7. Re-read the [security model](SECURITY.md) and repository
    [security policy](../SECURITY.md) for release-impacting changes.
 
-For the first release, leave `0.1.0` marked `Unreleased` until every gate below
-has evidence and publication is approved.
+For a release commit, replace `Unreleased` only after every pre-tag gate has
+evidence and publication has explicit approval.
 
 ## 2. Verify the checkout
 
@@ -71,10 +74,10 @@ tests, coverage, build, package validation, and the repository's integrated
 verification script. Inspect the script definition rather than assuming a
 historical command list is still complete.
 
-The supported operating-system matrix should exercise at least Linux, macOS,
-and Windows because path roots, separators, symlinks, `O_NOFOLLOW`, file modes,
-and terminal behavior vary. At the time of writing, completion of that matrix
-is not asserted here.
+Hosted CI exercises Linux, macOS, and Windows on Node.js 22.17.0, 24, and 26
+because path roots, separators, symlinks, `O_NOFOLLOW`, file modes, and terminal
+behavior vary. The tagged release workflow repeats the full verification and
+browser gates on Ubuntu with Node.js 24 before staging the candidate.
 
 For each environment, retain:
 
@@ -180,7 +183,10 @@ The workflow should:
 - request provenance for the exact verified package;
 - protect the release environment with maintainer approval;
 - refuse a tag/version mismatch or a dirty/generated diff;
-- publish the already tested tarball rather than an independently rebuilt one.
+- preserve and stage the already tested tarball rather than independently
+  rebuilding it;
+- defer public availability until a maintainer downloads, verifies, and approves
+  the staged candidate with npm 2FA.
 
 Review npm ownership, two-factor authentication, recovery access, package name,
 visibility, and provenance support immediately before the first publish. Never
@@ -197,8 +203,9 @@ bootstrap; it is not performed by the tag workflow in this repository.
    name remains available.
 2. On a separate, reviewed bootstrap commit, set the package version to
    `0.0.0-bootstrap.0`. Run every verification gate above, inspect its exact
-   `.artifacts/*.tgz`, and obtain second-maintainer review plus explicit
-   bootstrap approval. Do not tag this commit as a release.
+   `.artifacts/*.tgz`, and obtain second-maintainer review or a documented
+   solo-maintainer exception plus explicit bootstrap approval. Do not tag this
+   commit as a release.
 3. Publish only that exact prerelease candidate under a non-default dist-tag:
 
    ```sh
@@ -207,16 +214,18 @@ bootstrap; it is not performed by the tag workflow in this repository.
 
    Complete the registry's 2FA challenge. `--provenance=false` is an explicit,
    recorded bootstrap-only exception because a local interactive process cannot
-   issue GitHub OIDC provenance. The `bootstrap` tag prevents this placeholder
-   from becoming `latest`. If a token is unavoidable, use a short-lived,
-   package-scoped granular token and revoke it immediately; never store a
-   long-lived automation token.
+   issue GitHub OIDC provenance. npm requires every package to have a `latest`
+   tag, so a first publication may point both `bootstrap` and `latest` at the
+   placeholder even when `--tag bootstrap` is supplied. Minimize that interval
+   and move `latest` to the verified stable version at approval. If a token is
+   unavoidable, use a short-lived, package-scoped granular token and revoke it
+   immediately; never store a long-lived automation token.
 
 4. Verify the registry tarball, integrity, metadata, executable, and installed
    API before changing any publishing controls.
 5. Configure npm trusted publishing for repository `zackabrah/scopeglass`,
-   workflow `release.yml`, environment `npm`, and publish permission. Confirm
-   `package.json` still names the same repository.
+   workflow `release.yml`, environment `npm`, and stage-publish permission only.
+   Confirm `package.json` still names the same repository.
 6. Revoke the bootstrap token if one was used, restrict traditional token
    publishing, and require the real `v0.1.0` and all later releases to use the
    OIDC tag workflow. Return to the intended release commit and repeat every
@@ -224,26 +233,40 @@ bootstrap; it is not performed by the tag workflow in this repository.
    verified, remove the temporary `bootstrap` dist-tag and deprecate the
    placeholder version with a clear message.
 
+For 0.1.0, the bootstrap was published from reviewed PR #3 on 2026-07-14 as
+`scopeglass@0.0.0-bootstrap.0`. The registry tarball matched SHA-256
+`3551406c7051704c0ebdba339bee1f4132cd5aacb2d7f8dc97879700de8dc9e3`.
+The `zackabrah` account used auth-and-writes 2FA, no automation token was used,
+the registry install/API/schema smoke tests passed, trusted publishing was
+limited to `createStagedPackage`, and traditional publish tokens were disabled.
+
 If any identity, checksum, approval, or verification step differs from the
 reviewed record, stop and produce a new candidate instead of improvising.
 
-## 6. Approve and publish
+## 6. Tag, stage, inspect, approve, and publish
 
 Only after all prior gates have evidence and explicit release approval:
 
 1. Commit the dated changelog and version metadata.
 2. Obtain the required review on that exact commit.
 3. Create a signed or otherwise policy-compliant annotated tag such as
-   `v0.1.0`.
-4. Publish the verified tarball through the approved workflow, requesting
-   provenance if the registry and workflow support it.
-5. Create release notes from the changelog, including schema/ruleset versions,
+   `v0.1.0` on the exact green protected-main commit.
+4. Approve the protected GitHub environment. The workflow verifies the tag,
+   rebuilds and checks the candidate once, preserves it as a workflow artifact,
+   then uses OIDC to run `npm stage publish` with automatic provenance.
+5. Use `npm stage list scopeglass`, `npm stage view <stage-id>`, and
+   `npm stage download <stage-id>` to inspect the registry-staged candidate.
+   Compare its checksum and package contents with the workflow artifact.
+6. If and only if they match, run `npm stage approve <stage-id>` and complete
+   the registry's 2FA challenge. Reject a mismatched candidate with
+   `npm stage reject <stage-id>` and create a new reviewed release commit.
+7. Create release notes from the changelog, including schema/ruleset versions,
    supported Node.js range, checksum, known limitations, and security contact.
 
-The exact registry command belongs in the reviewed release workflow. If a
-manual emergency publication is ever authorized, record why, use the minimum
-privilege and duration possible, and preserve the tarball checksum and registry
-response.
+The exact staging command belongs in the reviewed release workflow. Direct
+token publication is disabled. Any manual emergency publication requires a
+separately reviewed change to that control, a public rationale, minimum
+privilege and duration, and preserved tarball and registry evidence.
 
 ## 7. Verify after publication
 
@@ -288,6 +311,7 @@ Candidate filename, integrity, and SHA-256:
 Tarball smoke test:
 Browser/security review:
 Workflow/provenance evidence:
+Stage ID and staged-candidate verification:
 Registry and post-publication verification:
 Known limitations:
 ```

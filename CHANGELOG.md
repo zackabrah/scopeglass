@@ -3,7 +3,7 @@
 All notable changes to Scopeglass are documented in this file. The format is
 based on Keep a Changelog, and the project follows Semantic Versioning.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-07-14
 
 ### Added
 
@@ -27,6 +27,8 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
 - Raised the minimum supported Node.js version to 22.17.0 so Windows
   file-identity checks run on a release containing the upstream libuv
   volume-serial-number fix.
+- The release workflow preserves the exact verified candidate and uses npm
+  staged publishing, protected GitHub OIDC, and explicit maintainer approval.
 
 ### Security
 
@@ -38,8 +40,5 @@ based on Keep a Changelog, and the project follows Semantic Versioning.
 - Local-reference checks cache shared path components while preserving
   component-wise symlink and final realpath containment validation.
 - File swap checks compare lossless `bigint` device and inode identifiers.
-
-The local browser, package, and audit gates pass, and hosted CI is active. npm
-publication, protected-environment approval, provenance, and registry evidence
-are not declared complete. Replace `Unreleased` with the release date only
-after every gate in [`docs/RELEASE.md`](docs/RELEASE.md) passes.
+- Package publication uses stage-only trusted publishing, disallows traditional
+  publish tokens, and is protected by immutable version tags and releases.

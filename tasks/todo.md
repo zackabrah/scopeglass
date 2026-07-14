@@ -43,8 +43,10 @@
         reviews have no remaining P1/P2 findings
   - [x] Local hostile corpus, golden fixture, packaging, audits, and isolated
         Chromium/Firefox/WebKit gates pass
-  - [ ] Hosted Linux/macOS/Windows matrix, protected release environment,
-        provenance, and registry evidence require the public repository
+  - [x] Hosted Linux/macOS/Windows matrix, protected release environment,
+        bootstrap registry verification, and independent reviews pass
+  - [ ] v0.1.0 staged approval, provenance, and final registry evidence remain
+        tag-time gates
 
 ## Verification record
 
@@ -53,7 +55,7 @@ successful command without intervening changes.
 
 Local verification on 2026-07-14:
 
-- `npm test` — 93 tests across 13 files passed, including exact byte/syntax
+- `npm test` — 98 tests across 14 files passed, including exact byte/syntax
   limits, parser amplification, Unicode normalization retention, filesystem
   aliases, reference-I/O bounds, output contracts, and release metadata.
 - `npm run typecheck`, `npm run lint`, and `actionlint` — passed on the settled

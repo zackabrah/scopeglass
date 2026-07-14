@@ -6,26 +6,22 @@ CI behavior. Please report suspected vulnerabilities privately.
 
 ## Supported versions
 
-Scopeglass v0.1.0 is currently a development release line; this repository does
-not yet assert a published npm release.
+Security fixes normally target the latest supported minor version.
 
-| Version                                         | Security support  |
-| ----------------------------------------------- | ----------------- |
-| Current default branch / 0.1.x development line | Accepted          |
-| Older snapshots and forks                       | Best effort only  |
-| Published npm versions                          | None asserted yet |
-
-After the first release, this table will identify the exact supported release
-line. Security fixes normally target the latest supported minor version.
+| Version               | Security support                  |
+| --------------------- | --------------------------------- |
+| 0.1.x                 | Supported                         |
+| 0.0.0-bootstrap.0     | Unsupported bootstrap placeholder |
+| Older snapshots/forks | Best effort only                  |
 
 ## Report a vulnerability
 
 Use GitHub's private
 [**Report a vulnerability**](https://github.com/zackabrah/scopeglass/security/advisories/new)
-flow. Enabling and testing private vulnerability reporting is a mandatory
-public-release gate. If that link is unavailable, do not open a public issue or
-send sensitive details; the release owner must restore the private flow or add
-a monitored private contact here before publishing Scopeglass.
+flow. Private vulnerability reporting is enabled and must remain available as
+a release gate. If that link is unavailable, do not open a public issue or send
+sensitive details; the release owner must restore the private flow or add a
+monitored private contact before publishing another Scopeglass version.
 
 Include:
 
