@@ -55,6 +55,10 @@ npm install --global scopeglass
 scopeglass inspect src/payments/charge.ts
 ```
 
+<div align="center">
+  <img src=".github/assets/terminal-demo.gif" alt="scopeglass check running in a terminal: the effective AGENTS.md chain with provenance, three diagnostics, and a failing policy gate" width="740">
+</div>
+
 A representative terminal report:
 
 ```text
