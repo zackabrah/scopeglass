@@ -309,6 +309,7 @@ export async function discoverScopeChain(
       path.join(directoryPath, "AGENTS.md"),
       displayPath,
       ANALYSIS_LIMITS.maxFileBytes,
+      resolvedRoot.realPath,
     );
 
     if (scope === undefined) {

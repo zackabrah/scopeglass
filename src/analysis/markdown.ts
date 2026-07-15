@@ -281,6 +281,12 @@ export function extractMarkdownScope(
     context: InstructionWalkContext,
   ): void {
     if (node.type === "heading") {
+      // Only root-level headings shape the section stack. A heading nested in
+      // a blockquote or list item is context local to that construct and must
+      // not relabel later root-level instructions.
+      if (context.parentType !== "root") {
+        return;
+      }
       const heading = normalizedPlainText(node);
       if (
         exceedsCodePointLimit(heading, ANALYSIS_LIMITS.maxSectionCodePoints)

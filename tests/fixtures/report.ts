@@ -8,7 +8,7 @@ export function createReportFixture(): ScopeglassReportV1 {
   return {
     kind: "scopeglass-report",
     schemaVersion: 1,
-    rulesetVersion: 1,
+    rulesetVersion: 2,
     root: ".",
     rootDiscovery: { method: "git-directory", marker: ".git" },
     target: "src/<hostile>&file.ts",

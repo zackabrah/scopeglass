@@ -96,6 +96,32 @@ describe("Markdown extraction", () => {
     ]);
   });
 
+  it("scopes the section stack to root-level headings", () => {
+    const text = [
+      "# Repository",
+      "",
+      "> # Quoted heading",
+      "> Quoted rule.",
+      "",
+      "- # Listed heading",
+      "",
+      "Root rule.",
+      "",
+    ].join("\n");
+
+    const result = extractMarkdownScope({ ...baseInput, text });
+
+    expect(
+      result.instructions.map(({ text: instruction, section }) => ({
+        text: instruction,
+        section,
+      })),
+    ).toEqual([
+      { text: "Quoted rule.", section: ["Repository"] },
+      { text: "Root rule.", section: ["Repository"] },
+    ]);
+  });
+
   it("extracts eligible inline and reference-style links but leaves inert links out", () => {
     const text = [
       "Read [the guide](docs/guide.md?mode=full#setup).",

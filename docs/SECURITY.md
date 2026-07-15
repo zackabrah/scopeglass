@@ -71,8 +71,12 @@ of the checkout's absolute location.
 
 For each discovered `AGENTS.md`, Scopeglass:
 
-1. obtains initial metadata with `lstat` and rejects symbolic links or
-   non-regular files;
+1. obtains initial metadata with `lstat` and rejects non-regular files. A
+   symbolic link or junction is followed only when its resolved target is a
+   regular file inside the analysis root (the common
+   `AGENTS.md -> CLAUDE.md` layout); a broken link, an escaping link, or a
+   link resolving to anything else is a fatal error, and the resolved path is
+   what continues through the steps below;
 2. opens read-only with `O_NOFOLLOW` when supported;
 3. compares the open descriptor and path metadata by device and inode;
 4. revalidates the path identity after opening;
@@ -179,6 +183,13 @@ from consuming disproportionate memory.
 
 The token count is an estimate—`ceil(UTF-8 bytes / 3)`—not a tokenizer result or
 a security boundary.
+
+The parser-sensitive syntax budgets are the practical ceiling for legitimate
+input: ordinary Markdown punctuation and newlines count toward them, so the
+1 MiB per-file and 4 MiB aggregate byte limits are reachable only by unusually
+punctuation-sparse text. This is intentional—the byte limits bound I/O while
+the syntax budgets bound parser state—but chains of large instruction files
+fail closed rather than partially analyzing.
 
 ## Known limitations
 

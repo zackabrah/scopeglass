@@ -16,7 +16,7 @@ import {
 describe("public contract", () => {
   it("publishes stable versions and hard limits", () => {
     expect(REPORT_SCHEMA_VERSION).toBe(1);
-    expect(RULESET_VERSION).toBe(1);
+    expect(RULESET_VERSION).toBe(2);
     expect(TOKEN_ESTIMATE_METHOD).toBe("utf8-bytes-div-3");
     expect(ANALYSIS_LIMITS).toEqual({
       maxScopes: 64,
