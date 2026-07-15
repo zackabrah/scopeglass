@@ -32,6 +32,12 @@ behavior changed, so `check` outcomes can differ from v0.1.0 on the same tree.
 - Restyled the HTML report and logo on a monochrome, geometric design system
   with a single green accent; the report now follows the OS color scheme
   (light and dark) while print output remains light.
+- Redesigned the terminal layout: instruction text leads each entry with
+  section, source, kind, and precedence on a metadata line beneath it,
+  entries are separated by a gutter rule, ordinals align past nine entries,
+  diagnostic sources use tree connectors, and the policy block is separated
+  from the report. Color continues to apply only to Scopeglass-owned
+  structure; repository text stays escaped and unstyled.
 
 ## [0.1.0] - 2026-07-14
 

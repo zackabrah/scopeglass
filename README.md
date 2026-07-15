@@ -58,7 +58,7 @@ scopeglass inspect src/payments/charge.ts
 A representative terminal report:
 
 ```text
-Scopeglass
+◎ Scopeglass
 Effective AGENTS.md instructions, with provenance.
 
 Overview
@@ -73,9 +73,11 @@ Scopes · root → target
 │ 3. packages/payments/AGENTS.md · precedence 2 · ~19 tokens
 
 Instructions
-│ 1. [Repository]
-│ Use pnpm.
-│    AGENTS.md:3-3 · paragraph · precedence 0
+│ 1. Use pnpm.
+│    [Repository] · AGENTS.md:3-3 · paragraph · precedence 0
+│
+│ 2. Always use tabs.
+│    [Repository] · AGENTS.md:5-5 · paragraph · precedence 0
 ```
 
 The formatting is not the point. In one command, the report answers:

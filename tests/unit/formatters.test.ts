@@ -61,7 +61,7 @@ describe("terminal rendering", () => {
     expect(output).toContain("Scopeglass");
     expect(output).toContain("Root discovery: nearest .git directory.");
     expect(output).toContain("1 scope · 1 instruction · 1 diagnostic");
-    expect(output).toContain("│ ::error::owned\\u{a}##vso[");
+    expect(output).toContain("│ 1. ::error::owned\\u{a}##vso[");
     expect(output).toContain("\\u{1b}");
     expect(output).toContain("\\u{202e}");
     expect(output).not.toContain("\u001b");

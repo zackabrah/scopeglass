@@ -52,14 +52,19 @@ function createLineHelpers(colors: Colors) {
   };
 }
 
+function ordinalPrefix(index: number, total: number): string {
+  return `${String(index + 1).padStart(String(total).length)}.`;
+}
+
 export function renderTerminal(
   report: ScopeglassReportV1,
   options: TerminalRenderOptions,
 ): string {
   const colors = picocolors.createColors(options.color);
-  const { gutter, labeled, owned, untrusted } = createLineHelpers(colors);
+  const { gutter, labeled, owned } = createLineHelpers(colors);
+  const separator = colors.dim("│");
   const lines: string[] = [
-    `${options.color ? `${colors.green("◎")} ` : ""}${colors.bold("Scopeglass")}`,
+    `${options.color ? colors.green("◎") : "◎"} ${colors.bold("Scopeglass")}`,
     colors.dim("Effective AGENTS.md instructions, with provenance."),
     "",
     colors.bold("Overview"),
@@ -80,9 +85,10 @@ export function renderTerminal(
   }
 
   for (const [index, scope] of report.scopes.entries()) {
+    const ordinal = ordinalPrefix(index, report.scopes.length);
     lines.push(
       gutter(
-        `${colors.dim(`${index + 1}.`)} ${visibleText(scope.path)}${colors.dim(` · precedence ${scope.precedence} · ~${scope.tokenEstimate.total.toLocaleString("en-US")} tokens`)}`,
+        `${colors.dim(ordinal)} ${visibleText(scope.path)}${colors.dim(` · precedence ${scope.precedence} · ~${scope.tokenEstimate.total.toLocaleString("en-US")} tokens`)}`,
       ),
     );
   }
@@ -97,11 +103,15 @@ export function renderTerminal(
       instruction.section.length === 0
         ? "Unsectioned"
         : instruction.section.join(" › ");
+    const ordinal = ordinalPrefix(index, report.instructions.length);
+    const metaIndent = " ".repeat(ordinal.length + 1);
+    if (index > 0) {
+      lines.push(separator);
+    }
     lines.push(
-      gutter(`${colors.dim(`${index + 1}.`)} ${visibleText(`[${section}]`)}`),
-      untrusted(instruction.text),
+      gutter(`${colors.dim(ordinal)} ${visibleText(instruction.text)}`),
       gutter(
-        `   ${visibleText(`${instruction.source.path}:${instruction.source.startLine}-${instruction.source.endLine}`)}${colors.dim(` · ${instruction.kind} · precedence ${instruction.precedence}`)}`,
+        `${metaIndent}${visibleText(`[${section}]`)}${colors.dim(" · ")}${visibleText(`${instruction.source.path}:${instruction.source.startLine}-${instruction.source.endLine}`)}${colors.dim(` · ${instruction.kind} · precedence ${instruction.precedence}`)}`,
       ),
     );
   }
@@ -117,7 +127,9 @@ export function renderTerminal(
     );
     for (const source of diagnostic.sources) {
       lines.push(
-        untrusted(`   ${source.path}:${source.startLine}-${source.endLine}`),
+        gutter(
+          `  ${colors.dim("└")} ${visibleText(`${source.path}:${source.startLine}-${source.endLine}`)}`,
+        ),
       );
     }
   }
@@ -144,6 +156,7 @@ export function renderCheckTerminal(
     ? colors.green(colors.bold("PASSED"))
     : colors.red(colors.bold("FAILED"));
   const policyOutput = [
+    "",
     colors.bold("Policy"),
     gutter(`${colors.dim("Result:")} ${resultLabel}`),
     gutter(`${colors.dim("Diagnostic threshold:")} ${result.policy.failOn}`),
