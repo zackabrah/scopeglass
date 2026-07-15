@@ -29,6 +29,9 @@ behavior changed, so `check` outcomes can differ from v0.1.0 on the same tree.
   rather than a diagnostic.
 - Redesigned the README with a theme-aware logo, a benefits-first overview,
   badges, and quick navigation. The logo ships in `docs/assets/`.
+- Restyled the HTML report and logo on a monochrome, geometric design system
+  with a single green accent; the report now follows the OS color scheme
+  (light and dark) while print output remains light.
 
 ## [0.1.0] - 2026-07-14
 
