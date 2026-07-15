@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; img-src 'self' data:; script-src 'none'; style-src 'unsafe-inline'; form-action 'none'">
+  <meta name="color-scheme" content="light dark">
+  <title>Scopeglass — devtools for AGENTS.md</title>
+  <meta name="description" content="See every AGENTS.md rule your coding agent inherits: precedence order, line-level provenance, context cost, and deterministic checks for broken references, duplicates, and conflicts. Local-only CLI.">
+  <link rel="canonical" href="https://zackabrah.github.io/scopeglass/">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Scopeglass — devtools for AGENTS.md">
+  <meta property="og:description" content="See every rule your coding agent inherits — provenance, conflicts, and context cost. Local-only, deterministic, MIT.">
+  <meta property="og:url" content="https://zackabrah.github.io/scopeglass/">
+  <meta property="og:image" content="https://zackabrah.github.io/scopeglass/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <style>
+:root{color-scheme:light dark;--bg:#ffffff;--fg:#171717;--muted:#666666;--line:#eaeaea;--panel:#fafafa;--accent:#146b53;--accent-soft:#e8f5ef;--code:#0f3d30;font-family:"Geist",Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-synthesis:none}
+@media(prefers-color-scheme:dark){:root{--bg:#0a0a0a;--fg:#ededed;--muted:#a1a1a1;--line:#262626;--panel:#111111;--accent:#4cc39a;--accent-soft:#122b21;--code:#8fd9bf}}
+*{box-sizing:border-box}
+html{background:var(--bg);color:var(--fg);scroll-behavior:smooth}
+body{margin:0;min-width:280px;line-height:1.55}
+a{color:inherit}
+.wrap{width:min(1040px,calc(100% - 2.5rem));margin:0 auto}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 0}
+.nav-brand{display:inline-flex;align-items:center;gap:.55rem;font-weight:650;letter-spacing:-.02em;text-decoration:none}
+.nav-links{display:flex;gap:1.25rem;font-size:.88rem;color:var(--muted)}
+.nav-links a{text-decoration:none}
+.nav-links a:hover{color:var(--fg)}
+header.hero{position:relative;padding:clamp(3rem,8vw,6rem) 0 clamp(2.5rem,5vw,4rem);border-bottom:1px solid var(--line);background:radial-gradient(720px 340px at 12% -10%,var(--accent-soft) 0%,transparent 70%)}
+.chip{display:inline-flex;align-items:center;gap:.5rem;margin:0 0 1.9rem;padding:.34rem .85rem;border:1px solid var(--line);border-radius:999px;background:var(--bg);font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.chip::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+h1{max-width:760px;margin:0;font-size:clamp(2.6rem,7vw,5rem);font-weight:650;letter-spacing:-.045em;line-height:1.02;overflow-wrap:anywhere}
+.lede{max-width:640px;margin:1.4rem 0 2rem;color:var(--muted);font-size:clamp(1rem,1.7vw,1.15rem);line-height:1.65}
+.install{display:inline-block;max-width:100%;padding:.85rem 1.2rem;border:1px solid var(--line);border-radius:10px;background:var(--panel);font:500 .95rem/1.4 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+.install b{color:var(--accent);font-weight:600}
+.hero-links{margin:1.1rem 0 0;font-size:.85rem;color:var(--muted)}
+.hero-links a{margin-right:1.1rem}
+main{padding:clamp(2.5rem,6vw,4.5rem) 0}
+section+section{margin-top:clamp(3rem,7vw,5rem)}
+.section-head{max-width:640px;margin-bottom:1.6rem}
+h2{margin:0 0 .5rem;font-size:clamp(1.5rem,3.2vw,2.1rem);font-weight:650;letter-spacing:-.03em;overflow-wrap:anywhere}
+.section-head p{margin:0;color:var(--muted)}
+.demo{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0a0a0a}
+.demo img{display:block;width:100%;height:auto}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
+.card{padding:1.15rem 1.25rem;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.card h3{margin:0 0 .45rem;font-size:.95rem;font-weight:650;letter-spacing:-.01em}
+.card p{margin:0;color:var(--muted);font-size:.88rem;line-height:1.6}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;align-items:stretch}
+pre{margin:0;padding:1.1rem 1.25rem;border:1px solid var(--line);border-radius:10px;background:var(--panel);font:400 .8rem/1.65 ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;overflow-x:auto;color:var(--fg)}
+pre .k{color:var(--code);font-weight:600}
+pre .d{color:var(--muted)}
+.sec{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:1.6rem 1.7rem}
+.sec ul{margin:.9rem 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:.55rem .8rem;color:var(--muted);font-size:.9rem}
+.sec li{padding-left:1.15rem;position:relative}
+.sec li::before{content:"";position:absolute;left:0;top:.48em;width:.45rem;height:.45rem;border-radius:50%;background:var(--accent)}
+.sec p{margin:.9rem 0 0;color:var(--muted);font-size:.85rem}
+footer{margin-top:clamp(3rem,7vw,5rem);border-top:1px solid var(--line);padding:1.6rem 0 2.4rem;color:var(--muted);font-size:.84rem}
+.foot{display:flex;flex-wrap:wrap;gap:1.1rem;justify-content:space-between;align-items:center}
+.foot a{margin-right:1rem}
+@media(max-width:820px){.grid{grid-template-columns:1fr 1fr}.duo{grid-template-columns:1fr}.sec ul{grid-template-columns:1fr}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.nav-links{gap:.85rem}}
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-brand" href="#">
+          <svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true"><rect x="30" y="8" width="48" height="64" rx="9" fill="none" stroke="currentColor" stroke-width="7"/><circle cx="44" cy="64" r="23" fill="none" stroke="#2aa07e" stroke-width="8"/><line x1="32" y1="64" x2="56" y2="64" stroke="#2aa07e" stroke-width="8" stroke-linecap="round"/><line x1="62" y1="82" x2="76" y2="96" stroke="#2aa07e" stroke-width="11" stroke-linecap="round"/></svg>
+          scopeglass
+        </a>
+        <div class="nav-links">
+          <a href="https://github.com/zackabrah/scopeglass">GitHub</a>
+          <a href="https://www.npmjs.com/package/scopeglass">npm</a>
+          <a href="https://github.com/zackabrah/scopeglass/blob/main/CHANGELOG.md">Changelog</a>
+        </div>
+      </nav>
+      <p class="chip">Devtools for AGENTS.md · v0.2.0 · MIT</p>
+      <h1>See every rule in the room.</h1>
+      <p class="lede">Coding agents read every <code>AGENTS.md</code> from your repository root down to the file they touch. Scopeglass makes that invisible chain visible — what an agent inherits at any path, where each rule comes from, and what it costs — without sending a byte anywhere.</p>
+      <p class="install"><b>$</b> npm install -g scopeglass</p>
+      <p class="hero-links">Node ≥ 22.17 · published with npm provenance · <a href="https://github.com/zackabrah/scopeglass/blob/main/docs/SECURITY.md">security model</a></p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section aria-labelledby="demo-title">
+      <div class="section-head">
+        <h2 id="demo-title">One command, the whole chain</h2>
+        <p>Root-to-target scopes in precedence order, every instruction with its <code>file:line</code> source, and deterministic diagnostics — here catching a broken reference, a duplicated rule, and a direct contradiction, then failing the CI gate.</p>
+      </div>
+      <div class="demo">
+        <img src="terminal-demo.gif" width="1624" height="2094" alt="Animated terminal session: scopeglass check reveals a two-scope AGENTS.md chain with provenance, flags a broken reference, a duplicate rule, and a possible conflict, and exits with a failing policy gate">
+      </div>
+    </section>
+
+    <section aria-labelledby="features-title">
+      <div class="section-head">
+        <h2 id="features-title">What you get</h2>
+        <p>Three renderers — terminal, versioned JSON, and a self-contained static HTML report — all fed by one deterministic analysis.</p>
+      </div>
+      <div class="grid">
+        <div class="card"><h3>Total visibility</h3><p>The full root→target chain in the exact precedence order agents accumulate it. Symlinked <code>AGENTS.md → CLAUDE.md</code> layouts included.</p></div>
+        <div class="card"><h3>Line-level provenance</h3><p>Every instruction carries its file and line, so "why did the agent do that?" has a lookup instead of a guess.</p></div>
+        <div class="card"><h3>Honest context cost</h3><p>Exact UTF-8 bytes plus a transparent, named token estimate — never a pretend tokenizer.</p></div>
+        <div class="card"><h3>Duplicates &amp; conflicts</h3><p>Narrow, deterministic heuristics flag repeated rules and opposite-polarity guidance, always showing both sources.</p></div>
+        <div class="card"><h3>Reference checking</h3><p>Broken or root-escaping relative links inside instruction files become error diagnostics before an agent trips on them.</p></div>
+        <div class="card"><h3>CI-ready gate</h3><p>Stable exit codes, inclusive severity thresholds, token budgets, and JSON Schema-versioned output.</p></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="ci-title">
+      <div class="section-head">
+        <h2 id="ci-title">Make it a build gate</h2>
+        <p>Stop instruction rot before it merges: fail on broken references or a blown context budget.</p>
+      </div>
+      <div class="duo">
+        <pre><span class="d"># CI</span>
+<span class="k">scopeglass check</span> src --fail-on error --max-tokens 8000
+<span class="d"># exit 0 pass · 1 policy failure · 2 unsafe/unreadable input</span></pre>
+        <pre>{
+  <span class="k">"kind"</span>: "scopeglass-report",
+  <span class="k">"schemaVersion"</span>: 1,
+  <span class="k">"rulesetVersion"</span>: 2,
+  <span class="k">"tokenEstimate"</span>: { "method": "utf8-bytes-div-3", … }
+}</pre>
+      </div>
+    </section>
+
+    <section aria-labelledby="security-title">
+      <div class="sec">
+        <h2 id="security-title">Local by construction</h2>
+        <ul>
+          <li>No network requests, model calls, telemetry, or plugins</li>
+          <li>Never executes or imports repository content</li>
+          <li>Bounded reads with symlink and containment validation</li>
+          <li>Terminal output neutralizes ANSI and CI workflow-command injection</li>
+          <li>Static HTML reports: no JavaScript, restrictive CSP, inert links</li>
+          <li>Byte-deterministic output — no timestamps, no absolute host paths</li>
+        </ul>
+        <p>Instruction files are treated as hostile input. Read the full <a href="https://github.com/zackabrah/scopeglass/blob/main/docs/SECURITY.md">threat model</a> — including what it deliberately does not defend against.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span>© <a href="https://github.com/zackabrah">zackabrah</a> · MIT License</span>
+      <span>
+        <a href="https://github.com/zackabrah/scopeglass">GitHub</a>
+        <a href="https://www.npmjs.com/package/scopeglass">npm</a>
+        <a href="https://github.com/zackabrah/scopeglass/blob/main/SECURITY.md">Report a vulnerability</a>
+      </span>
+      <span>Scopeglass reports the rules — it never executes them.</span>
+    </div>
+  </footer>
+</body>
+</html>
