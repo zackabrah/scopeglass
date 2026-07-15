@@ -9,10 +9,10 @@
 checked without sending repository content anywhere.**
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/zackabrah/scopeglass/ci.yml?branch=main&label=tests&logo=githubactions&logoColor=white)](https://github.com/zackabrah/scopeglass/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/scopeglass?logo=npm&color=146b53)](https://www.npmjs.com/package/scopeglass)
-[![Node.js](https://img.shields.io/node/v/scopeglass?logo=nodedotjs&color=146b53)](https://www.npmjs.com/package/scopeglass)
-[![Provenance](https://img.shields.io/badge/npm-provenance-146b53?logo=npm)](https://www.npmjs.com/package/scopeglass)
-[![License](https://img.shields.io/github/license/zackabrah/scopeglass?color=17201d)](LICENSE)
+[![npm](https://img.shields.io/npm/v/scopeglass?logo=npm&color=000000)](https://www.npmjs.com/package/scopeglass)
+[![Node.js](https://img.shields.io/node/v/scopeglass?logo=nodedotjs&color=000000)](https://www.npmjs.com/package/scopeglass)
+[![Provenance](https://img.shields.io/badge/npm-provenance-000000?logo=npm)](https://www.npmjs.com/package/scopeglass)
+[![License](https://img.shields.io/github/license/zackabrah/scopeglass?color=666666)](LICENSE)
 
 [Why](#why-scopeglass) · [Quick start](#quick-start) · [CLI](#cli) ·
 [Security](#privacy-and-security) · [Limits](#hard-limits) ·
