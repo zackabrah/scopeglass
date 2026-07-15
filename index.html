@@ -42,6 +42,14 @@ section+section{margin-top:clamp(3rem,7vw,5rem)}
 .section-head{max-width:640px;margin-bottom:1.6rem}
 h2{margin:0 0 .5rem;font-size:clamp(1.5rem,3.2vw,2.1rem);font-weight:650;letter-spacing:-.03em;overflow-wrap:anywhere}
 .section-head p{margin:0;color:var(--muted)}
+.demo-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(1.5rem,3vw,2.75rem);align-items:start}
+.demo-copy{position:sticky;top:2rem}
+.demo-copy h2{margin:0 0 .5rem}
+.demo-copy>p{margin:0;color:var(--muted)}
+.demo-points{margin:1.4rem 0 0;padding:0;list-style:none;display:grid;gap:.7rem;color:var(--muted);font-size:.9rem;line-height:1.6}
+.demo-points li{padding-left:1.15rem;position:relative}
+.demo-points li::before{content:"";position:absolute;left:0;top:.52em;width:.42rem;height:.42rem;border-radius:50%;background:var(--accent)}
+.demo-points b{color:var(--fg);font-weight:600}
 .demo{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0a0a0a}
 .demo img{display:block;width:100%;height:auto}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
@@ -60,7 +68,7 @@ pre .d{color:var(--muted)}
 footer{margin-top:clamp(3rem,7vw,5rem);border-top:1px solid var(--line);padding:1.6rem 0 2.4rem;color:var(--muted);font-size:.84rem}
 .foot{display:flex;flex-wrap:wrap;gap:1.1rem;justify-content:space-between;align-items:center}
 .foot a{margin-right:1rem}
-@media(max-width:820px){.grid{grid-template-columns:1fr 1fr}.duo{grid-template-columns:1fr}.sec ul{grid-template-columns:1fr}}
+@media(max-width:820px){.grid{grid-template-columns:1fr 1fr}.duo{grid-template-columns:1fr}.sec ul{grid-template-columns:1fr}.demo-grid{grid-template-columns:1fr}.demo-copy{position:static}.demo{max-width:560px}}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.nav-links{gap:.85rem}}
   </style>
 </head>
@@ -88,12 +96,20 @@ footer{margin-top:clamp(3rem,7vw,5rem);border-top:1px solid var(--line);padding:
 
   <main class="wrap">
     <section aria-labelledby="demo-title">
-      <div class="section-head">
-        <h2 id="demo-title">One command, the whole chain</h2>
-        <p>Root-to-target scopes in precedence order, every instruction with its <code>file:line</code> source, and deterministic diagnostics — here catching a broken reference, a duplicated rule, and a direct contradiction, then failing the CI gate.</p>
-      </div>
-      <div class="demo">
-        <img src="terminal-demo.gif" width="1624" height="2094" alt="Animated terminal session: scopeglass check reveals a two-scope AGENTS.md chain with provenance, flags a broken reference, a duplicate rule, and a possible conflict, and exits with a failing policy gate">
+      <div class="demo-grid">
+        <div class="demo-copy">
+          <h2 id="demo-title">One command, the whole chain</h2>
+          <p>A monorepo with a symlinked root <code>AGENTS.md → CLAUDE.md</code> and a nested package file. One <code>scopeglass check</code> shows everything an agent inherits — and why this tree fails CI.</p>
+          <ul class="demo-points">
+            <li><b>Scopes, root → target.</b> The chain in the precedence order agents accumulate it, with per-file token estimates. The symlinked root file is followed and attributed.</li>
+            <li><b>Instructions with provenance.</b> The rule text leads; section, <code>file:line</code>, kind, and precedence sit beneath it.</li>
+            <li><b>Deterministic diagnostics.</b> A reference to a deleted style guide, the same rule billed twice, and <i>use pnpm</i> vs <i>never use pnpm</i> — each with both sources cited.</li>
+            <li><b>The gate.</b> <code>--fail-on info --max-tokens 60</code> trips both policies: result <b>FAILED</b>, exit code 1.</li>
+          </ul>
+        </div>
+        <div class="demo">
+          <img src="terminal-demo.gif" width="1624" height="2094" alt="Animated terminal session: scopeglass check reveals a two-scope AGENTS.md chain with provenance, flags a broken reference, a duplicate rule, and a possible conflict, and exits with a failing policy gate">
+        </div>
       </div>
     </section>
 
