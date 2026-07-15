@@ -17,6 +17,8 @@ consumed as JSON, or saved as a self-contained HTML file.
 > **Release status:** v0.1.0 is the first public release. Stable tarballs are
 > verified in a protected GitHub workflow, staged through npm trusted publishing
 > with OIDC provenance, and published only after explicit maintainer 2FA approval.
+> The `main` branch contains unreleased v0.2.0 changes under diagnostic
+> ruleset v2; see the [changelog](CHANGELOG.md).
 
 ## Install
 
@@ -267,7 +269,10 @@ Runtime analysis is local-only:
 - no telemetry, model calls, network requests, remote assets, or plugins;
 - no execution or import of repository content, fenced blocks, hooks, or
   referenced files;
-- bounded, validated UTF-8 reads with symlink and containment checks;
+- bounded, validated UTF-8 reads with symlink and containment checks. An
+  `AGENTS.md` symlink (for example `AGENTS.md -> CLAUDE.md`) is followed only
+  when it resolves to a regular file inside the analysis root; broken or
+  escaping links remain fatal;
 - root-relative serialized paths, with no absolute host paths in JSON or HTML;
 - terminal control/workflow-command neutralization;
 - contextually escaped static HTML with a restrictive CSP;
@@ -300,6 +305,13 @@ repositories.
 
 The context estimate is `ceil(UTF-8 bytes / 3)`. It is a transparent,
 cross-agent heuristic—not a model-specific tokenizer result.
+
+In practice the parser-sensitive syntax budgets bind before the byte limits:
+periods, hyphens, and newlines all count, so ordinary Markdown reaches 16,384
+parser-sensitive characters in the low hundreds of kilobytes—well under the
+1 MiB per-file byte cap. Exceeding any hard limit is a fatal error rather than
+a diagnostic, so `check` cannot return a policy result for a chain beyond
+these bounds.
 
 Duplicate/conflict heuristics normalize only instructions of at most 1,024
 Unicode code points, retain individual normalized forms of at most 8,192 code

@@ -46,7 +46,7 @@ describe("report JSON Schema", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).not.toContain("generatedAt");
     expect(schema.properties?.["schemaVersion"]).toMatchObject({ const: 1 });
-    expect(schema.properties?.["rulesetVersion"]).toMatchObject({ const: 1 });
+    expect(schema.properties?.["rulesetVersion"]).toMatchObject({ const: 2 });
     expect(schema.properties?.["scopes"]).toMatchObject({
       maxItems: ANALYSIS_LIMITS.maxScopes,
     });
@@ -127,7 +127,7 @@ describe("check-result JSON Schema", () => {
     expect(schema.additionalProperties).toBe(false);
     expect(schema.required).not.toContain("generatedAt");
     expect(schema.properties?.["schemaVersion"]).toMatchObject({ const: 1 });
-    expect(schema.properties?.["rulesetVersion"]).toMatchObject({ const: 1 });
+    expect(schema.properties?.["rulesetVersion"]).toMatchObject({ const: 2 });
     expect(validate(passing), JSON.stringify(validate.errors)).toBe(true);
     expect(validate(failing), JSON.stringify(validate.errors)).toBe(true);
   });

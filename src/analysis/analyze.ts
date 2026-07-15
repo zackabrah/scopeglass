@@ -34,7 +34,13 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function compareInstructions(
+function instructionOrdinal(id: string): number {
+  const ordinal = Number(id.slice(id.lastIndexOf(":") + 1));
+  return Number.isSafeInteger(ordinal) ? ordinal : 0;
+}
+
+/** Exported for focused ordering tests; not part of the public package API. */
+export function compareInstructions(
   left: InstructionRecord,
   right: InstructionRecord,
 ): number {
@@ -42,6 +48,7 @@ function compareInstructions(
     left.precedence - right.precedence ||
     left.source.startLine - right.source.startLine ||
     left.source.endLine - right.source.endLine ||
+    instructionOrdinal(left.id) - instructionOrdinal(right.id) ||
     compareText(left.id, right.id)
   );
 }

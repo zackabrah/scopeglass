@@ -91,11 +91,13 @@ part of a successful report.
 ## Safe read boundary
 
 Instruction files are untrusted input. Before and during a read, Scopeglass
-validates that the path is a regular file, rejects symbolic links, compares
-device and inode identity across `lstat`, open-file `fstat`, and revalidation,
-and reads at most the configured byte limit. `O_NOFOLLOW` is used where the
-platform supports it, with identity validation retained as the portable
-fallback.
+validates that the path is a regular file, compares device and inode identity
+across `lstat`, open-file `fstat`, and revalidation, and reads at most the
+configured byte limit. An `AGENTS.md` symlink or junction is followed only
+when it resolves to a regular file inside the analysis root; broken links,
+escaping links, and links to non-files are fatal. `O_NOFOLLOW` is used on the
+resolved path where the platform supports it, with identity validation
+retained as the portable fallback.
 
 Bytes must be valid UTF-8. A UTF-8 byte-order mark on an instruction file is
 accepted and removed before parsing. Aggregate size, scope count,

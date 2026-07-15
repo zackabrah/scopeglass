@@ -125,7 +125,7 @@ describe("terminal rendering", () => {
       {
         kind: "scopeglass-check",
         schemaVersion: 1,
-        rulesetVersion: 1,
+        rulesetVersion: 2,
         report: empty,
         policy: {
           passed: true,
@@ -143,7 +143,7 @@ describe("terminal rendering", () => {
       {
         kind: "scopeglass-check",
         schemaVersion: 1,
-        rulesetVersion: 1,
+        rulesetVersion: 2,
         report: severities,
         policy: {
           passed: false,

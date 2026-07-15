@@ -1,5 +1,8 @@
 export const REPORT_SCHEMA_VERSION = 1 as const;
-export const RULESET_VERSION = 1 as const;
+// Ruleset 2: AGENTS.md symlinks resolving to a regular file inside the root
+// are followed, the section stack tracks root-level headings only, and
+// same-line instruction ordering ties break on the numeric ordinal.
+export const RULESET_VERSION = 2 as const;
 export const TOKEN_ESTIMATE_METHOD = "utf8-bytes-div-3" as const;
 
 export const ANALYSIS_LIMITS = Object.freeze({

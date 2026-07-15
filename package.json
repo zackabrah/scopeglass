@@ -1,6 +1,6 @@
 {
   "name": "scopeglass",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DevTools for AGENTS.md: inspect effective instructions, provenance, conflicts, references, and context cost.",
   "keywords": [
     "agents-md",
@@ -53,8 +53,7 @@
     "LICENSE",
     "README.md",
     "SECURITY.md",
-    "SPEC.md",
-    "tasks/plan.md"
+    "SPEC.md"
   ],
   "scripts": {
     "build": "tsup src/index.ts src/cli.ts --format esm --dts --sourcemap --clean --target node22 --platform node",

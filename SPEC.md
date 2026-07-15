@@ -133,7 +133,7 @@ Stable error codes are: `invalid-option`, `invalid-root`, `target-not-found`,
 ### JSON contract
 
 All JSON output is deterministic and carries `schemaVersion: 1` and
-`rulesetVersion: 1`. There is no generation timestamp. Strict report and
+`rulesetVersion: 2`. There is no generation timestamp. Strict report and
 check-result JSON Schemas ship in the package. The v1 shapes are exact: adding,
 removing, or changing a field requires a new schema version and a major release.
 A diagnostic ruleset change that can alter `check` results increments
@@ -201,7 +201,7 @@ interface DiagnosticRecord {
 interface ScopeglassReportV1 {
   kind: "scopeglass-report";
   schemaVersion: 1;
-  rulesetVersion: 1;
+  rulesetVersion: 2;
   root: ".";
   rootDiscovery: RootDiscovery;
   target: string;
@@ -221,7 +221,7 @@ interface ScopeglassReportV1 {
 interface ScopeglassCheckResultV1 {
   kind: "scopeglass-check";
   schemaVersion: 1;
-  rulesetVersion: 1;
+  rulesetVersion: 2;
   report: ScopeglassReportV1;
   policy: {
     passed: boolean;
@@ -238,7 +238,8 @@ ordinal; diagnostic IDs derive from code and sorted ordinal. Consumers must not
 persist IDs as global identifiers.
 
 Ordering is stable: scopes are root-to-target; instructions are ordered by
-scope precedence, start line, end line, then ID; diagnostics are ordered by
+scope precedence, start line, end line, numeric local ordinal, then ID;
+diagnostics are ordered by
 severity (`error`, `warning`, `info`), code, first source path/line, then ID.
 Terminal wording is not a machine contract; consumers use JSON codes and fields.
 
@@ -344,9 +345,12 @@ export type Diagnostic =
 4. A file target uses its parent directory for scope discovery; a directory
    target uses itself. Serialized target and scope paths are real,
    root-relative paths.
-5. Walk root-to-target and consider only a regular file named exactly
-   `AGENTS.md`. Any AGENTS.md symlink, junction, directory, FIFO, device, or
-   socket (including a broken or in-root symlink) is a fatal boundary error.
+5. Walk root-to-target and consider only a file named exactly `AGENTS.md`. A
+   symlink or junction at that name is followed only when it resolves to a
+   regular file inside the analysis root; the resolved file is then read under
+   the same identity checks. A broken link, a link resolving outside the root,
+   or a link resolving to anything other than a regular file is a fatal
+   boundary error, as is any AGENTS.md directory, FIFO, device, or socket.
 6. Files are lstat'd, opened `O_RDONLY | O_NOFOLLOW` where supported, fstat'd as
    regular files, then read from that descriptor in bounded chunks up to the
    applicable limit plus one byte. Invalid UTF-8 is fatal. A UTF-8 BOM is
@@ -381,7 +385,9 @@ No whole-repository enumeration or pairwise instruction comparison occurs.
 
 ### Instruction extraction and precedence
 
-- Headings maintain a section stack but are not instructions.
+- Root-level headings maintain a section stack but are not instructions. A
+  heading nested inside a blockquote or list item is inert context and does not
+  change the section stack.
 - When a normalized reference label has multiple definitions, the first
   definition wins, matching CommonMark.
 - A root-level paragraph is one `paragraph` instruction.

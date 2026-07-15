@@ -16,7 +16,7 @@
     },
     "rulesetVersion": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "report": {
       "$ref": "urn:scopeglass:schema:report:v1"

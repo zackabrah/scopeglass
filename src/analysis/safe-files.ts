@@ -4,6 +4,7 @@ import { TextDecoder } from "node:util";
 
 import { ScopeglassError } from "../error.js";
 import { sameFile } from "../file-identity.js";
+import { containedRelativePath } from "./paths.js";
 
 const GIT_MARKER_MAX_BYTES = 4 * 1024;
 const READ_CHUNK_BYTES = 64 * 1024;
@@ -258,10 +259,63 @@ export async function inspectGitMarker(
   };
 }
 
+/**
+ * Resolve an AGENTS.md symlink when its final target is a regular file inside
+ * the analysis root. Broken links, escaping links, and links to anything other
+ * than a regular file remain fatal so analysis never proceeds on ambiguous
+ * input. `readCheckedFile` revalidates the resolved identity around the open.
+ */
+async function resolveInstructionSymlink(
+  absolutePath: string,
+  displayPath: string,
+  containmentRoot: string,
+): Promise<{ path: string; stats: BigIntStats }> {
+  let resolvedPath: string;
+  try {
+    resolvedPath = await realpath(absolutePath);
+  } catch {
+    throw new ScopeglassError(
+      "unsafe-symlink",
+      "An AGENTS.md symlink cannot be resolved.",
+      { path: displayPath },
+    );
+  }
+
+  if (containedRelativePath(containmentRoot, resolvedPath) === undefined) {
+    throw new ScopeglassError(
+      "unsafe-symlink",
+      "An AGENTS.md symlink resolves outside the analysis root.",
+      { path: displayPath },
+    );
+  }
+
+  let resolvedStats: BigIntStats;
+  try {
+    resolvedStats = await lstat(resolvedPath, { bigint: true });
+  } catch {
+    throw new ScopeglassError(
+      "unsafe-symlink",
+      "An AGENTS.md symlink cannot be resolved.",
+      { path: displayPath },
+    );
+  }
+
+  if (resolvedStats.isSymbolicLink() || !resolvedStats.isFile()) {
+    throw new ScopeglassError(
+      "unsafe-symlink",
+      "An AGENTS.md symlink must resolve to a regular file inside the analysis root.",
+      { path: displayPath },
+    );
+  }
+
+  return { path: resolvedPath, stats: resolvedStats };
+}
+
 export async function readInstructionFile(
   absolutePath: string,
   displayPath: string,
   maxBytes: number,
+  containmentRoot?: string,
 ): Promise<BoundedTextFile | undefined> {
   let initialStats: BigIntStats;
   try {
@@ -273,21 +327,34 @@ export async function readInstructionFile(
     throw boundaryError("instruction", displayPath, "read");
   }
 
+  let readPath = absolutePath;
+  let readStats = initialStats;
+
   if (initialStats.isSymbolicLink()) {
-    throw new ScopeglassError(
-      "unsafe-symlink",
-      "An AGENTS.md path cannot be a symbolic link or junction.",
-      { path: displayPath },
+    if (containmentRoot === undefined) {
+      throw new ScopeglassError(
+        "unsafe-symlink",
+        "An AGENTS.md path cannot be a symbolic link or junction.",
+        { path: displayPath },
+      );
+    }
+    const resolved = await resolveInstructionSymlink(
+      absolutePath,
+      displayPath,
+      containmentRoot,
     );
+    readPath = resolved.path;
+    readStats = resolved.stats;
   }
-  if (!initialStats.isFile()) {
+
+  if (!readStats.isFile()) {
     throw boundaryError("instruction", displayPath, "not-regular");
   }
 
   const contents = await readCheckedFile(
-    absolutePath,
+    readPath,
     displayPath,
-    initialStats,
+    readStats,
     maxBytes,
     "instruction",
   );

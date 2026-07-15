@@ -12,7 +12,8 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md), not a public issue.
 
 - [SPEC.md](SPEC.md) is the behavioral source of truth.
 - [AGENTS.md](AGENTS.md) contains repository-specific working instructions.
-- [tasks/plan.md](tasks/plan.md) records the intended implementation order.
+- `tasks/plan.md` (repository only, not packaged) records the intended
+  implementation order.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains module boundaries.
 - [docs/SECURITY.md](docs/SECURITY.md) explains the trust model.
 

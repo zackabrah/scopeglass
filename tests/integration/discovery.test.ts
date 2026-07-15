@@ -186,7 +186,7 @@ describe("scope discovery", () => {
     }
   });
 
-  it("rejects target and AGENTS.md symlinks even when they stay in-root", async () => {
+  it("rejects a target symlink even when it stays in-root", async () => {
     const repository = await tempDirectory();
     await repository.mkdir("repo/.git");
     const realTarget = await repository.mkdir("repo/real-target");
@@ -197,11 +197,69 @@ describe("scope discovery", () => {
       code: "unsafe-symlink",
       path: "target-link",
     });
+  });
 
-    await repository.write("repo/guidance.md", "Guidance.\n");
-    await symlink("guidance.md", path.join(repository.path, "repo/AGENTS.md"));
+  it("follows an AGENTS.md symlink that resolves inside the root", async () => {
+    const repository = await tempDirectory();
+    await repository.mkdir("repo/.git");
+    await repository.write("repo/docs/guidance.md", "Linked guidance.\n");
+    await symlink(
+      path.join("docs", "guidance.md"),
+      path.join(repository.path, "repo/AGENTS.md"),
+    );
+    const target = await repository.mkdir("repo/src");
 
-    await expect(discoverScopeChain(realTarget)).rejects.toMatchObject({
+    const result = await discoverScopeChain(target);
+
+    expect(result.scopes.map((scope) => scope.path)).toEqual(["AGENTS.md"]);
+    expect(result.scopes[0]).toMatchObject({
+      bytes: 17,
+      text: "Linked guidance.\n",
+      precedence: 0,
+    });
+  });
+
+  it("rejects an AGENTS.md symlink that escapes the analysis root", async () => {
+    const repository = await tempDirectory();
+    await repository.write("outside.md", "Outside guidance.\n");
+    await repository.mkdir("repo/.git");
+    await symlink(
+      path.join("..", "outside.md"),
+      path.join(repository.path, "repo/AGENTS.md"),
+    );
+    const target = await repository.mkdir("repo/src");
+
+    await expect(discoverScopeChain(target)).rejects.toMatchObject({
+      code: "unsafe-symlink",
+      path: "AGENTS.md",
+    });
+  });
+
+  it("rejects broken and non-file AGENTS.md symlinks", async () => {
+    const danglingRepository = await tempDirectory();
+    await danglingRepository.mkdir("repo/.git");
+    await symlink(
+      "missing.md",
+      path.join(danglingRepository.path, "repo/AGENTS.md"),
+    );
+    const danglingTarget = await danglingRepository.mkdir("repo/src");
+
+    await expect(discoverScopeChain(danglingTarget)).rejects.toMatchObject({
+      code: "unsafe-symlink",
+      path: "AGENTS.md",
+    });
+
+    const directoryRepository = await tempDirectory();
+    await directoryRepository.mkdir("repo/.git");
+    await directoryRepository.mkdir("repo/real-directory");
+    await symlink(
+      "real-directory",
+      path.join(directoryRepository.path, "repo/AGENTS.md"),
+      "dir",
+    );
+    const directoryTarget = await directoryRepository.mkdir("repo/src");
+
+    await expect(discoverScopeChain(directoryTarget)).rejects.toMatchObject({
       code: "unsafe-symlink",
       path: "AGENTS.md",
     });

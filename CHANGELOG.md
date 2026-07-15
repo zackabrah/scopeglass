@@ -3,6 +3,31 @@
 All notable changes to Scopeglass are documented in this file. The format is
 based on Keep a Changelog, and the project follows Semantic Versioning.
 
+## [0.2.0] - 2026-07-15
+
+Diagnostic ruleset version 2. Reports keep schema version 1; ruleset-observable
+behavior changed, so `check` outcomes can differ from v0.1.0 on the same tree.
+
+### Changed
+
+- An `AGENTS.md` symbolic link or junction is now followed when it resolves to
+  a regular file inside the analysis root (the common
+  `AGENTS.md -> CLAUDE.md` layout). Broken links, links escaping the root, and
+  links resolving to non-files remain fatal `unsafe-symlink` errors, and the
+  resolved file passes through the same open-descriptor identity checks.
+- Only root-level headings update the section stack. A heading nested inside a
+  blockquote or list item no longer relabels later instructions.
+- Same-line instruction ordering ties now break on the numeric instruction
+  ordinal instead of lexicographic ID comparison.
+- The npm package no longer ships `tasks/plan.md`; it remains in the
+  repository.
+
+### Documentation
+
+- Documented that the parser-sensitive syntax budgets, not the byte limits,
+  are the practical input ceiling, and that exceeding any hard limit is fatal
+  rather than a diagnostic.
+
 ## [0.1.0] - 2026-07-14
 
 ### Added
