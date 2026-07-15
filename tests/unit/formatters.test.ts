@@ -249,7 +249,9 @@ describe("HTML rendering", () => {
     empty.summary.instructionCount = 0;
     const emptyOutput = renderHtml(empty);
     expect(emptyOutput).toContain("No AGENTS.md files apply to this target.");
-    expect(emptyOutput).toContain("No diagnostics.");
+    expect(emptyOutput).toContain(
+      `No diagnostics under ruleset v${empty.rulesetVersion}.`,
+    );
 
     const report = createReportFixture();
     report.instructions = [];
