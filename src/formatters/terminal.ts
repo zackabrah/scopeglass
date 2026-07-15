@@ -15,10 +15,9 @@ export interface TerminalRenderOptions {
   color: boolean;
 }
 
-function severityLabel(
-  severity: DiagnosticSeverity,
-  colors: ReturnType<typeof picocolors.createColors>,
-): string {
+type Colors = ReturnType<typeof picocolors.createColors>;
+
+function severityLabel(severity: DiagnosticSeverity, colors: Colors): string {
   switch (severity) {
     case "error":
       return colors.red(colors.bold("ERROR"));
@@ -29,12 +28,28 @@ function severityLabel(
   }
 }
 
-function untrusted(value: string): string {
-  return `│ ${visibleText(value)}`;
-}
-
 function countLabel(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Terminal lines follow one rule: repository-controlled text is escaped with
+ * `visibleText` and never wrapped in ANSI styling; color applies only to
+ * Scopeglass-owned structure (gutter, labels, ordinals, metadata). With color
+ * disabled every helper degrades to the exact plain string.
+ */
+function createLineHelpers(colors: Colors) {
+  const gutter = (value: string) => `${colors.dim("│")} ${value}`;
+  return {
+    gutter,
+    /** Owned label followed by untrusted repository text. */
+    labeled: (label: string, value: string) =>
+      gutter(`${colors.dim(label)} ${visibleText(value)}`),
+    /** Entirely Scopeglass-owned informational line. */
+    owned: (value: string) => gutter(colors.dim(value)),
+    /** Entirely untrusted repository text. */
+    untrusted: (value: string) => gutter(visibleText(value)),
+  };
 }
 
 export function renderTerminal(
@@ -42,17 +57,18 @@ export function renderTerminal(
   options: TerminalRenderOptions,
 ): string {
   const colors = picocolors.createColors(options.color);
+  const { gutter, labeled, owned, untrusted } = createLineHelpers(colors);
   const lines: string[] = [
-    colors.bold(colors.cyan("Scopeglass")),
+    `${options.color ? `${colors.green("◎")} ` : ""}${colors.bold("Scopeglass")}`,
     colors.dim("Effective AGENTS.md instructions, with provenance."),
     "",
     colors.bold("Overview"),
-    untrusted(`Target: ${report.target}`),
-    untrusted(describeRootDiscovery(report.rootDiscovery)),
-    untrusted(
-      `Context estimate: ${report.tokenEstimate.total.toLocaleString("en-US")} tokens (${report.tokenEstimate.bytes.toLocaleString("en-US")} UTF-8 bytes, ${report.tokenEstimate.method})`,
+    labeled("Target:", report.target),
+    owned(describeRootDiscovery(report.rootDiscovery)),
+    gutter(
+      `${colors.dim("Context estimate:")} ${report.tokenEstimate.total.toLocaleString("en-US")} tokens ${colors.dim(`(${report.tokenEstimate.bytes.toLocaleString("en-US")} UTF-8 bytes, ${report.tokenEstimate.method})`)}`,
     ),
-    untrusted(
+    gutter(
       `${countLabel(report.summary.scopeCount, "scope")} · ${countLabel(report.summary.instructionCount, "instruction")} · ${countLabel(report.diagnostics.length, "diagnostic")}`,
     ),
     "",
@@ -60,20 +76,20 @@ export function renderTerminal(
   ];
 
   if (report.scopes.length === 0) {
-    lines.push(untrusted("No AGENTS.md files apply."));
+    lines.push(owned("No AGENTS.md files apply."));
   }
 
   for (const [index, scope] of report.scopes.entries()) {
     lines.push(
-      untrusted(
-        `${index + 1}. ${scope.path} · precedence ${scope.precedence} · ~${scope.tokenEstimate.total.toLocaleString("en-US")} tokens`,
+      gutter(
+        `${colors.dim(`${index + 1}.`)} ${visibleText(scope.path)}${colors.dim(` · precedence ${scope.precedence} · ~${scope.tokenEstimate.total.toLocaleString("en-US")} tokens`)}`,
       ),
     );
   }
 
   lines.push("", colors.bold("Instructions"));
   if (report.instructions.length === 0) {
-    lines.push(untrusted("No prose instructions were extracted."));
+    lines.push(owned("No prose instructions were extracted."));
   }
 
   for (const [index, instruction] of report.instructions.entries()) {
@@ -82,22 +98,22 @@ export function renderTerminal(
         ? "Unsectioned"
         : instruction.section.join(" › ");
     lines.push(
-      untrusted(`${index + 1}. [${section}]`),
+      gutter(`${colors.dim(`${index + 1}.`)} ${visibleText(`[${section}]`)}`),
       untrusted(instruction.text),
-      untrusted(
-        `   ${instruction.source.path}:${instruction.source.startLine}-${instruction.source.endLine} · ${instruction.kind} · precedence ${instruction.precedence}`,
+      gutter(
+        `   ${visibleText(`${instruction.source.path}:${instruction.source.startLine}-${instruction.source.endLine}`)}${colors.dim(` · ${instruction.kind} · precedence ${instruction.precedence}`)}`,
       ),
     );
   }
 
   lines.push("", colors.bold("Diagnostics"));
   if (report.diagnostics.length === 0) {
-    lines.push(untrusted("No diagnostics."));
+    lines.push(owned("No diagnostics."));
   }
 
   for (const diagnostic of report.diagnostics) {
     lines.push(
-      `│ ${severityLabel(diagnostic.severity, colors)} ${diagnostic.code}: ${visibleText(diagnostic.message)}`,
+      `${colors.dim("│")} ${severityLabel(diagnostic.severity, colors)} ${diagnostic.code}: ${visibleText(diagnostic.message)}`,
     );
     for (const source of diagnostic.sources) {
       lines.push(
@@ -113,6 +129,8 @@ export function renderCheckTerminal(
   result: ScopeglassCheckResultV1,
   options: TerminalRenderOptions,
 ): string {
+  const colors = picocolors.createColors(options.color);
+  const { gutter } = createLineHelpers(colors);
   const reportOutput = renderTerminal(result.report, options);
   const failures =
     result.policy.failures.length === 0
@@ -122,12 +140,15 @@ export function renderCheckTerminal(
     result.policy.maxTokens === undefined
       ? "disabled"
       : result.policy.maxTokens.toLocaleString("en-US");
+  const resultLabel = result.policy.passed
+    ? colors.green(colors.bold("PASSED"))
+    : colors.red(colors.bold("FAILED"));
   const policyOutput = [
-    "Policy",
-    `│ Result: ${result.policy.passed ? "PASSED" : "FAILED"}`,
-    `│ Diagnostic threshold: ${result.policy.failOn}`,
-    `│ Token budget: ${budget}`,
-    `│ Failures: ${failures}`,
+    colors.bold("Policy"),
+    gutter(`${colors.dim("Result:")} ${resultLabel}`),
+    gutter(`${colors.dim("Diagnostic threshold:")} ${result.policy.failOn}`),
+    gutter(`${colors.dim("Token budget:")} ${budget}`),
+    gutter(`${colors.dim("Failures:")} ${failures}`),
     "",
   ].join("\n");
 
