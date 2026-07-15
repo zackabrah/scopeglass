@@ -124,7 +124,7 @@ export function renderHtml(report: ScopeglassReportV1): string {
           .join("");
   const diagnosticMarkup =
     report.diagnostics.length === 0
-      ? '<p class="empty">No diagnostics. The effective instruction chain is internally consistent under ruleset v1.</p>'
+      ? `<p class="empty">No diagnostics under ruleset v${report.rulesetVersion}.</p>`
       : `<ul class="diagnostic-list" role="list">${report.diagnostics.map(renderDiagnostic).join("")}</ul>`;
   const html = `<!doctype html>
 <html lang="en">
@@ -139,8 +139,8 @@ export function renderHtml(report: ScopeglassReportV1): string {
 <body>
   <header class="hero">
     <p class="brand"><span>Scopeglass · ruleset v${report.rulesetVersion}</span></p>
-    <h1>See every rule in the room.</h1>
-    <p class="lede">The effective AGENTS.md chain for this target, ordered by precedence with line-level provenance and a transparent context estimate.</p>
+    <h1>Effective AGENTS.md instructions</h1>
+    <p class="lede">Root-to-target instruction chain for this target: precedence-ordered scopes, line-level provenance, and a transparent context estimate.</p>
     <p class="target untrusted">${escapeHtml(report.target)}</p>
     <p class="root-discovery">${escapeHtml(describeRootDiscovery(report.rootDiscovery))}</p>
     <section class="metrics-region" aria-label="Analysis summary">
