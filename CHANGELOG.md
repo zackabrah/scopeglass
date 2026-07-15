@@ -27,6 +27,8 @@ behavior changed, so `check` outcomes can differ from v0.1.0 on the same tree.
 - Documented that the parser-sensitive syntax budgets, not the byte limits,
   are the practical input ceiling, and that exceeding any hard limit is fatal
   rather than a diagnostic.
+- Redesigned the README with a theme-aware logo, a benefits-first overview,
+  badges, and quick navigation. The logo ships in `docs/assets/`.
 
 ## [0.1.0] - 2026-07-14
 

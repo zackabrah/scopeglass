@@ -1,18 +1,24 @@
-# Scopeglass
+<div align="center">
 
-[![Tests](https://img.shields.io/github/actions/workflow/status/zackabrah/scopeglass/ci.yml?branch=main&label=tests&logo=githubactions&logoColor=white)](https://github.com/zackabrah/scopeglass/actions/workflows/ci.yml)
-[![npm](https://img.shields.io/npm/v/scopeglass?logo=npm)](https://www.npmjs.com/package/scopeglass)
-[![Node.js](https://img.shields.io/node/v/scopeglass?logo=nodedotjs)](https://www.npmjs.com/package/scopeglass)
-[![License](https://img.shields.io/github/license/zackabrah/scopeglass)](LICENSE)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/scopeglass-logo-dark.svg">
+  <img src="docs/assets/scopeglass-logo-light.svg" alt="Scopeglass — see every rule in the room" width="460">
+</picture>
 
-**See every `AGENTS.md` rule that applies to a path—ordered, attributed, and
+**See every `AGENTS.md` rule that applies to a path — ordered, attributed, and
 checked without sending repository content anywhere.**
 
-Scopeglass follows the canonical root-to-target `AGENTS.md` chain, extracts
-prose instructions with line-level provenance, estimates context size, checks
-local Markdown references, and flags exact duplicates or narrowly matched
-possible conflicts. The same deterministic report can be rendered for a human,
-consumed as JSON, or saved as a self-contained HTML file.
+[![Tests](https://img.shields.io/github/actions/workflow/status/zackabrah/scopeglass/ci.yml?branch=main&label=tests&logo=githubactions&logoColor=white)](https://github.com/zackabrah/scopeglass/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/scopeglass?logo=npm&color=146b53)](https://www.npmjs.com/package/scopeglass)
+[![Node.js](https://img.shields.io/node/v/scopeglass?logo=nodedotjs&color=146b53)](https://www.npmjs.com/package/scopeglass)
+[![Provenance](https://img.shields.io/badge/npm-provenance-146b53?logo=npm)](https://www.npmjs.com/package/scopeglass)
+[![License](https://img.shields.io/github/license/zackabrah/scopeglass?color=17201d)](LICENSE)
+
+[Why](#why-scopeglass) · [Quick start](#quick-start) · [CLI](#cli) ·
+[Security](#privacy-and-security) · [Limits](#hard-limits) ·
+[API](#programmatic-api)
+
+</div>
 
 > **Release status:** v0.1.0 is the first public release. Stable tarballs are
 > verified in a protected GitHub workflow, staged through npm trusted publishing
@@ -20,31 +26,36 @@ consumed as JSON, or saved as a self-contained HTML file.
 > The `main` branch contains unreleased v0.2.0 changes under diagnostic
 > ruleset v2; see the [changelog](CHANGELOG.md).
 
-## Install
+## Why Scopeglass?
+
+Coding agents read every `AGENTS.md` from your repository root down to the file
+they touch. That chain is invisible: rules stack up across directories, quietly
+duplicate or contradict each other, go stale, and bill you context tokens on
+every request. Scopeglass is the devtools pane for that chain — one command
+shows exactly what an agent inherits at any path, where each rule comes from,
+and what it costs.
+
+|                                    |                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 🔍 **Total visibility**            | The full root→target `AGENTS.md` chain in the exact precedence order agents accumulate it — nothing hiding in a parent directory.     |
+| 🧾 **Line-level provenance**       | Every instruction carries its `file:line` source, so "why did the agent do that?" has a lookup instead of a guess.                    |
+| 🧮 **Honest context cost**         | Exact UTF-8 bytes plus a transparent, named token estimate — know what the chain costs before an agent pays it.                       |
+| ⚖️ **Duplicate & conflict flags**  | Narrow, deterministic heuristics surface repeated rules and opposite-polarity guidance, always showing both sources.                  |
+| 🔗 **Reference checking**          | Broken or root-escaping relative links inside instruction files become error diagnostics before an agent trips on them.               |
+| 🚦 **CI-ready policy gate**        | `scopeglass check` fails builds on diagnostics or token budgets, with stable exit codes and schema-versioned JSON.                    |
+| 🔒 **Local by construction**       | No network, no model calls, no telemetry, and no execution of repository content. Ever.                                               |
+| 🎨 **Three renderers, one report** | The same deterministic report renders for the terminal, as versioned JSON, or as a self-contained static HTML page with a strict CSP. |
+
+## Quick start
 
 Scopeglass requires Node.js 22.17.0 or newer.
 
 ```sh
 npm install --global scopeglass
-scopeglass --help
+scopeglass inspect src/payments/charge.ts
 ```
 
-For the ESM API and exported JSON Schemas, install it as a project dependency:
-
-```sh
-npm install scopeglass
-```
-
-## The five-minute value
-
-From a source checkout, with Node.js 22.17.0 or newer:
-
-```sh
-npm ci
-npm run dev -- inspect tests/fixtures/hero-repository/packages/payments/src/charge.ts --root tests/fixtures/hero-repository --no-color
-```
-
-A representative terminal report looks like this:
+A representative terminal report:
 
 ```text
 Scopeglass
@@ -67,14 +78,25 @@ Instructions
 │    AGENTS.md:3-3 · paragraph · precedence 0
 ```
 
-The important part is not the formatting. In one command, the report answers:
+The formatting is not the point. In one command, the report answers:
 
-- Which canonical `AGENTS.md` files apply?
-- In what precedence order do they accumulate?
-- Which file and lines produced each instruction?
-- How much context do the files approximately add?
-- Are local references broken or unsafe?
-- Is guidance repeated or directly opposed under the conservative v1 ruleset?
+- ✅ Which canonical `AGENTS.md` files apply?
+- ✅ In what precedence order do they accumulate?
+- ✅ Which file and lines produced each instruction?
+- ✅ How much context do the files approximately add?
+- ✅ Are local references broken or unsafe?
+- ✅ Is guidance repeated or directly opposed under the conservative ruleset?
+
+> 💡 **Make it a gate:** add
+> `scopeglass check src --fail-on error --max-tokens 8000` to CI and stop
+> instruction rot before it merges.
+
+For the ESM API and exported JSON Schemas, install it as a project dependency
+instead:
+
+```sh
+npm install scopeglass
+```
 
 Scopeglass reports expected scope. It does not reveal a vendor's private prompt,
 prove model compliance, or decide that one natural-language instruction
@@ -95,7 +117,11 @@ node dist/cli.js --help
 
 During development, `npm run dev -- <arguments>` runs the TypeScript CLI
 directly. After the package is installed or linked locally, use `scopeglass`
-instead.
+instead. To try the repository's demo fixture:
+
+```sh
+npm run dev -- inspect tests/fixtures/hero-repository/packages/payments/src/charge.ts --root tests/fixtures/hero-repository --no-color
+```
 
 ## CLI
 
@@ -140,9 +166,9 @@ existing file, symlink, junction, FIFO, or device. `--output -` streams HTML to
 stdout. Reports are static, contain no JavaScript or remote assets, and are not
 opened automatically.
 
-Use `--output <path>` for safe file creation. Redirecting `--output -` with a
-shell can overwrite an existing file and uses the shell's permissions rather
-than Scopeglass's exclusive `0600` creation safeguards.
+> ⚠️ Use `--output <path>` for safe file creation. Redirecting `--output -`
+> with a shell can overwrite an existing file and uses the shell's permissions
+> rather than Scopeglass's exclusive `0600` creation safeguards.
 
 Reports contain instruction text and repository-relative paths. Treat them as
 repository data; an `AGENTS.md` file may itself contain secrets.
@@ -189,7 +215,7 @@ contract carries separate schema and diagnostic-ruleset versions.
 {
   "kind": "scopeglass-report",
   "schemaVersion": 1,
-  "rulesetVersion": 1,
+  "rulesetVersion": 2,
   "root": ".",
   "rootDiscovery": { "method": "target-fallback" },
   "target": ".",
@@ -279,7 +305,7 @@ Runtime analysis is local-only:
 - inert repository-authored links.
 
 Scopeglass is not an operating-system sandbox. Hard links, bind mounts, and a
-same-user process racing directory mutations are outside the v0.1.0 guarantee.
+same-user process racing directory mutations are outside the current guarantee.
 Read the [security design](docs/SECURITY.md), [reporting policy](SECURITY.md),
 and [architecture](docs/ARCHITECTURE.md) before using it on adversarial
 repositories.
@@ -321,11 +347,11 @@ preventing Unicode compatibility expansion from amplifying memory.
 
 ## Scope and non-goals
 
-v0.1.0 supports canonical ancestor `AGENTS.md` files only. It intentionally does
-not analyze global instructions, `CLAUDE.md`, Cursor rules, Copilot instruction
-formats, `SKILL.md`, MCP configuration, or a vendor's private prompt assembly.
-It does not rewrite instruction files, score writing quality, call a model, or
-crawl every source file.
+Scopeglass supports canonical ancestor `AGENTS.md` files only. It intentionally
+does not analyze global instructions, `CLAUDE.md`, Cursor rules, Copilot
+instruction formats, `SKILL.md`, MCP configuration, or a vendor's private
+prompt assembly. It does not rewrite instruction files, score writing quality,
+call a model, or crawl every source file.
 
 The full contract is in [SPEC.md](SPEC.md). The rationale for keeping the tool
 local and deterministic is recorded in
@@ -357,3 +383,9 @@ npm run verify
 
 Release preparation is documented in [docs/RELEASE.md](docs/RELEASE.md). The
 project is available under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+<sub>Scopeglass reports the rules — it never executes them. 🔍</sub>
+</div>

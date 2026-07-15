@@ -343,7 +343,7 @@ exposing exploit details prematurely.
 - Immutable GitHub release:
   [Scopeglass v0.1.0](https://github.com/zackabrah/scopeglass/releases/tag/v0.1.0),
   including the verified tarball and checksum manifest
-- Known limitations: see [README.md](../README.md#the-five-minute-value), the
+- Known limitations: see [README.md](../README.md#quick-start), the
   [hard limits](../README.md#hard-limits), and the
   [security design](SECURITY.md#known-limitations)
 
